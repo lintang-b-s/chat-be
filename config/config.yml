@@ -15,3 +15,9 @@ postgres:
 rabbitmq:
   rpc_server_exchange: 'rpc_server'
   rpc_client_exchange: 'rpc_client'
+
+redis:
+  server_address: ':5555'
+  host: chat-redis
+  address: 6379
+  password: 

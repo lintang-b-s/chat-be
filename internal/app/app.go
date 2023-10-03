@@ -19,6 +19,7 @@ import (
 	"github.com/evrone/go-clean-template/pkg/logger"
 	"github.com/evrone/go-clean-template/pkg/postgres"
 	"github.com/evrone/go-clean-template/pkg/rabbitmq/rmq_rpc/server"
+	"github.com/evrone/go-clean-template/pkg/redis"
 )
 
 // Run creates objects via constructors.
@@ -31,6 +32,10 @@ func Run(cfg *config.Config) {
 		l.Fatal(fmt.Errorf("app - Run - postgres.New: %w", err))
 	}
 	defer pg.Close()
+
+
+	// Redis repo
+	redis := redis.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
 
 	// Use case
 	translationUseCase := usecase.New(
