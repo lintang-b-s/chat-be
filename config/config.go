@@ -14,6 +14,7 @@ type (
 		Log  `yaml:"logger"`
 		PG   `yaml:"postgres"`
 		RMQ  `yaml:"rabbitmq"`
+		Redis `yaml:"redis"`
 	}
 
 	// App -.
@@ -43,6 +44,11 @@ type (
 		ServerExchange string `env-required:"true" yaml:"rpc_server_exchange" env:"RMQ_RPC_SERVER"`
 		ClientExchange string `env-required:"true" yaml:"rpc_client_exchange" env:"RMQ_RPC_CLIENT"`
 		URL            string `env-required:"true"                            env:"RMQ_URL"`
+	}
+
+	Redis struct{
+		Address string `env-required:"true" yaml:"server_address" env:"SERVER_ADDRESS"`
+		Password string `env-required:"true" yaml:"password" env:"REDIS_PASSWORD"`
 	}
 )
 

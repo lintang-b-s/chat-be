@@ -15,6 +15,7 @@ import (
 	"github.com/evrone/go-clean-template/internal/usecase"
 	"github.com/evrone/go-clean-template/internal/usecase/repo"
 	"github.com/evrone/go-clean-template/internal/usecase/webapi"
+	"github.com/evrone/go-clean-template/pkg/gorm"
 	"github.com/evrone/go-clean-template/pkg/httpserver"
 	"github.com/evrone/go-clean-template/pkg/logger"
 	"github.com/evrone/go-clean-template/pkg/postgres"
@@ -35,7 +36,13 @@ func Run(cfg *config.Config) {
 
 
 	// Redis repo
-	redis := redis.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
+	redis, err := redis.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
+	if err != nil{
+		l.Fatal(fmt.Errorf("app - Run - redis - redis.NewRedis: %w", err))
+	}
+
+	// gorm repo
+	gorm, err := gorm.NewGorm();
 
 	// Use case
 	translationUseCase := usecase.New(
@@ -44,9 +51,9 @@ func Run(cfg *config.Config) {
 	)
 
 	// RabbitMQ RPC Server
-	rmqRouter := amqprpc.NewRouter(translationUseCase)
+	// rmqRouter := amqprpc.NewRouter(translationUseCase)
 
-	rmqServer, err := server.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
+	// rmqServer, err := server.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
 	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - rmqServer - server.New: %w", err))
 	}
@@ -65,8 +72,7 @@ func Run(cfg *config.Config) {
 		l.Info("app - Run - signal: " + s.String())
 	case err = <-httpServer.Notify():
 		l.Error(fmt.Errorf("app - Run - httpServer.Notify: %w", err))
-	case err = <-rmqServer.Notify():
-		l.Error(fmt.Errorf("app - Run - rmqServer.Notify: %w", err))
+
 	}
 
 	// Shutdown
@@ -75,8 +81,4 @@ func Run(cfg *config.Config) {
 		l.Error(fmt.Errorf("app - Run - httpServer.Shutdown: %w", err))
 	}
 
-	err = rmqServer.Shutdown()
-	if err != nil {
-		l.Error(fmt.Errorf("app - Run - rmqServer.Shutdown: %w", err))
-	}
 }
