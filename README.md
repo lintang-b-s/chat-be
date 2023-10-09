@@ -12,3 +12,7 @@ chat backend using redis and websocket
 ## Message table for 1 on 1 chat
 ![message table for 1 on 1 chat](https://res.cloudinary.com/dex4u3rw4/image/upload/v1696433591/figure-12-9-356WMC2A_o15qjo.webp)
 
+
+
+### ref
+- code template from https://github.com/evrone/go-clean-template

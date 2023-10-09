@@ -4,7 +4,7 @@ package usecase
 import (
 	"context"
 
-	"github.com/evrone/go-clean-template/internal/entity"
+	"github.com/lintangbs/chat-be/internal/entity"
 )
 
 //go:generate mockgen -source=interfaces.go -destination=./mocks_test.go -package=usecase_test
@@ -25,5 +25,15 @@ type (
 	// TranslationWebAPI -.
 	TranslationWebAPI interface {
 		Translate(entity.Translation) (entity.Translation, error)
+	}
+
+	// Auth Use Case
+	Auth interface {
+		Register(context.Context, entity.CreateUserRequest) (entity.CreateUserResponse, error)
+	}
+
+	// AuthRepo
+	AuthRepo interface {
+		CreateUser(context.Context, entity.CreateUserRequest) (entity.CreateUserResponse, error)
 	}
 )

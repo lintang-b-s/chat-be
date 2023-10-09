@@ -10,9 +10,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	// Swagger docs.
-	_ "github.com/evrone/go-clean-template/docs"
-	"github.com/evrone/go-clean-template/internal/usecase"
-	"github.com/evrone/go-clean-template/pkg/logger"
+	_ "github.com/lintangbs/chat-be/docs"
+	"github.com/lintangbs/chat-be/internal/usecase"
+	"github.com/lintangbs/chat-be/pkg/logger"
 )
 
 // NewRouter -.
@@ -22,7 +22,7 @@ import (
 // @version     1.0
 // @host        localhost:8080
 // @BasePath    /v1
-func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Translation) {
+func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Translation, a usecase.Auth) {
 	// Options
 	handler.Use(gin.Logger())
 	handler.Use(gin.Recovery())
@@ -30,11 +30,9 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Translation) {
 	// Swagger
 	swaggerHandler := ginSwagger.DisablingWrapHandler(swaggerFiles.Handler, "DISABLE_SWAGGER_HTTP_HANDLER")
 	handler.GET("/swagger/*any", swaggerHandler)
-	
 
 	// K8s probe
 	handler.GET("/healthz", func(c *gin.Context) { c.Status(http.StatusOK) })
-	
 
 	// Prometheus metrics
 	handler.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -43,6 +41,6 @@ func NewRouter(handler *gin.Engine, l logger.Interface, t usecase.Translation) {
 	h := handler.Group("/v1")
 	{
 		newTranslationRoutes(h, t, l)
-		
+		newAuthRoutes(h, a, l)
 	}
 }

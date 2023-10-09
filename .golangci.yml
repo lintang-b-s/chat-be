@@ -1,6 +1,6 @@
 linters-settings:
   gci:
-    local-prefixes: github.com/evrone/go-clean-template
+    local-prefixes: github.com/lintangbs/chat-be
   dupl:
     threshold: 100
   errorlint:

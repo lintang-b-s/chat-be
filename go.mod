@@ -1,4 +1,4 @@
-module github.com/evrone/go-clean-template
+module github.com/lintangbs/chat-be
 
 go 1.17
 

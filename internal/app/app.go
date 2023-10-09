@@ -9,18 +9,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/evrone/go-clean-template/config"
-	amqprpc "github.com/evrone/go-clean-template/internal/controller/amqp_rpc"
-	v1 "github.com/evrone/go-clean-template/internal/controller/http/v1"
-	"github.com/evrone/go-clean-template/internal/usecase"
-	"github.com/evrone/go-clean-template/internal/usecase/repo"
-	"github.com/evrone/go-clean-template/internal/usecase/webapi"
-	"github.com/evrone/go-clean-template/pkg/gorm"
-	"github.com/evrone/go-clean-template/pkg/httpserver"
-	"github.com/evrone/go-clean-template/pkg/logger"
-	"github.com/evrone/go-clean-template/pkg/postgres"
-	"github.com/evrone/go-clean-template/pkg/rabbitmq/rmq_rpc/server"
-	"github.com/evrone/go-clean-template/pkg/redis"
+	"github.com/lintangbs/chat-be/config"
+	v1 "github.com/lintangbs/chat-be/internal/controller/http/v1"
+	"github.com/lintangbs/chat-be/internal/usecase"
+	"github.com/lintangbs/chat-be/internal/usecase/repo"
+	"github.com/lintangbs/chat-be/internal/usecase/webapi"
+	"github.com/lintangbs/chat-be/pkg/gorm"
+	"github.com/lintangbs/chat-be/pkg/httpserver"
+	"github.com/lintangbs/chat-be/pkg/logger"
+	"github.com/lintangbs/chat-be/pkg/postgres"
+	"github.com/lintangbs/chat-be/pkg/redis"
 )
 
 // Run creates objects via constructors.
@@ -34,20 +32,23 @@ func Run(cfg *config.Config) {
 	}
 	defer pg.Close()
 
-
 	// Redis repo
 	redis, err := redis.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
-	if err != nil{
+	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - redis - redis.NewRedis: %w", err))
 	}
 
 	// gorm repo
-	gorm, err := gorm.NewGorm();
+	gorm, err := gorm.NewGorm()
 
 	// Use case
 	translationUseCase := usecase.New(
 		repo.New(pg),
 		webapi.New(),
+	)
+
+	authUseCase := usecase.NewAuthUseCase(
+		repo.NewAuthRepo(gorm.Pool),
 	)
 
 	// RabbitMQ RPC Server
@@ -60,7 +61,7 @@ func Run(cfg *config.Config) {
 
 	// HTTP Server
 	handler := gin.New()
-	v1.NewRouter(handler, l, translationUseCase)
+	v1.NewRouter(handler, l, translationUseCase, authUseCase)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
 	// Waiting signal
