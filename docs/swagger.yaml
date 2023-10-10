@@ -15,6 +15,20 @@ definitions:
         example: text for translation
         type: string
     type: object
+  v1.createUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 3
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
   v1.doTranslateRequest:
     properties:
       destination:
@@ -27,9 +41,9 @@ definitions:
         example: auto
         type: string
     required:
-      - destination
-      - original
-      - source
+    - destination
+    - original
+    - source
     type: object
   v1.historyResponse:
     properties:
@@ -38,10 +52,45 @@ definitions:
           $ref: '#/definitions/entity.Translation'
         type: array
     type: object
+  v1.loginUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  v1.loginUserResponse:
+    properties:
+      access_token:
+        type: string
+      access_token_expires_at:
+        type: string
+      refresh_token:
+        type: string
+      refresh_token_expires_at:
+        type: string
+      session_id:
+        type: string
+      user:
+        $ref: '#/definitions/v1.userResponse'
+    type: object
   v1.response:
     properties:
       error:
         example: message
+        type: string
+    type: object
+  v1.userResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      username:
         type: string
     type: object
 host: localhost:8080
@@ -54,18 +103,18 @@ paths:
   /translation/do-translate:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Translate a text
       operationId: do-translate
       parameters:
-        - description: Set up translation
-          in: body
-          name: request
-          required: true
-          schema:
-            $ref: '#/definitions/v1.doTranslateRequest'
+      - description: Set up translation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.doTranslateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
@@ -81,15 +130,15 @@ paths:
             $ref: '#/definitions/v1.response'
       summary: Translate
       tags:
-        - translation
+      - translation
   /translation/history:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Show all translation history
       operationId: history
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: OK
@@ -101,5 +150,67 @@ paths:
             $ref: '#/definitions/v1.response'
       summary: Show history
       tags:
-        - translation
+      - translation
+  /v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login User
+      operationId: loginUser
+      parameters:
+      - description: Login  user
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.loginUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.loginUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: Login User
+      tags:
+      - user
+  /v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register User in Db
+      operationId: registerUser
+      parameters:
+      - description: Set up user
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.userResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: Register User in Db
+      tags:
+      - user
 swagger: "2.0"

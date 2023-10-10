@@ -66,8 +66,3 @@ func (r *AuthRepo) GetUser(ctx context.Context, email string) (entity.GetUser, e
 
 	return user, nil
 }
-
-func (r *AuthRepo) CreateSession(ctx context.Context, request entity.CreateSessionRequest) (entity.Session, error) {
-	//TODO implement me
-	panic("implement me")
-}

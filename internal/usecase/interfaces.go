@@ -37,7 +37,6 @@ type (
 	AuthRepo interface {
 		CreateUser(context.Context, entity.CreateUserRequest) (entity.User, error)
 		GetUser(context.Context, string) (entity.GetUser, error)
-		CreateSession(context.Context, entity.CreateSessionRequest) (entity.Session, error)
 	}
 
 	// SessionRepo

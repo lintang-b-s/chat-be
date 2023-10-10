@@ -14,12 +14,9 @@ import (
 	v1 "github.com/lintangbs/chat-be/internal/controller/http/v1"
 	"github.com/lintangbs/chat-be/internal/usecase"
 	"github.com/lintangbs/chat-be/internal/usecase/repo"
-	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/pkg/gorm"
 	"github.com/lintangbs/chat-be/pkg/httpserver"
 	"github.com/lintangbs/chat-be/pkg/logger"
-	"github.com/lintangbs/chat-be/pkg/postgres"
-	"github.com/lintangbs/chat-be/pkg/redis"
 )
 
 // Run creates objects via constructors.
@@ -27,29 +24,33 @@ func Run(cfg *config.Config) {
 	l := logger.New(cfg.Log.Level)
 
 	// Repository
-	pg, err := postgres.New(cfg.PG.URL, postgres.MaxPoolSize(cfg.PG.PoolMax))
-	if err != nil {
-		l.Fatal(fmt.Errorf("app - Run - postgres.New: %w", err))
-	}
-	defer pg.Close()
+	//pg, err := postgres.New(cfg.PG.URL, postgres.MaxPoolSize(cfg.PG.PoolMax))
+	//if err != nil {
+	//	l.Fatal(fmt.Errorf("app - Run - postgres.New: %w", err))
+	//}
+	//defer pg.Close()
 
-	// Redis repo
-	redis, err := redis.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
-	if err != nil {
-		l.Fatal(fmt.Errorf("app - Run - redis - redis.NewRedis: %w", err))
-	}
+	//// Redis repo
+	//redis, err := redis.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
+	//if err != nil {
+	//	l.Fatal(fmt.Errorf("app - Run - redis - redis.NewRedis: %w", err))
+	//}
 
 	// gorm repo
 	gorm, err := gorm.NewGorm()
 
 	// jwt
-	jwtTokenMaker, err := jwt.NewJWTMaker("secretKeyuntukJWT")
+	jwtTokenMaker, err := jwt.NewJWTMaker("eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY5NjkyMDA0MywiaWF0IjoxNjk2OTIwMDQzfQ.6x0sgC9T1l64c2IpuCT3WBnw02ZRmHZI-iq4rP5cA9s")
+
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - jwtTokenMaker - jwt.NewJWTMaker: %w", err))
+	}
 
 	// Use case
-	translationUseCase := usecase.New(
-		repo.New(pg),
-		webapi.New(),
-	)
+	//translationUseCase := usecase.New(
+	//	repo.New(pg),
+	//	webapi.New(),
+	//)
 
 	authUseCase := usecase.NewAuthUseCase(
 		repo.NewAuthRepo(gorm.Pool),
@@ -57,17 +58,9 @@ func Run(cfg *config.Config) {
 		repo.NewSessionRepo(gorm.Pool),
 	)
 
-	// RabbitMQ RPC Server
-	// rmqRouter := amqprpc.NewRouter(translationUseCase)
-
-	// rmqServer, err := server.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
-	if err != nil {
-		l.Fatal(fmt.Errorf("app - Run - rmqServer - server.New: %w", err))
-	}
-
 	// HTTP Server
 	handler := gin.New()
-	v1.NewRouter(handler, l, translationUseCase, authUseCase)
+	v1.NewRouter(handler, l, authUseCase)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
 	// Waiting signal

@@ -24,6 +24,7 @@ func newAuthRoutes(handler *gin.RouterGroup, a usecase.Auth, l logger.Interface)
 	h := handler.Group("/auth")
 	{
 		h.POST("/register", r.registerUser)
+		h.POST("/login", r.loginUser)
 	}
 
 }
@@ -46,11 +47,11 @@ type userResponse struct {
 // @Tags  	    user
 // @Accept      json
 // @Produce     json
-// @Param       request body CreateUserRequest true "Set up user"
-// @Success     200 {object} CreateUserResponse
+// @Param       request body createUserRequest true "Set up user"
+// @Success     200 {object} userResponse
 // @Failure     400 {object} response
 // @Failure     500 {object} response
-// @Router      /subscription [post]
+// @Router      /v1/auth/register [post]
 // Author: https://github.com/lintang-b-s
 func (r *authRoutes) registerUser(c *gin.Context) {
 	var request createUserRequest
@@ -89,7 +90,7 @@ func (r *authRoutes) registerUser(c *gin.Context) {
 
 // ---- loginUser ----
 type loginUserRequest struct {
-	Email    string `json:"email" binding:"required,alphanum"`
+	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required,min=3"`
 }
 
@@ -108,11 +109,11 @@ type loginUserResponse struct {
 // @Tags  	    user
 // @Accept      json
 // @Produce     json
-// @Param       request body LoginUserRequest true "Login  user"
-// @Success     200 {object} LoginUserResponse
+// @Param       request body loginUserRequest true "Login  user"
+// @Success     200 {object} loginUserResponse
 // @Failure     400 {object} response
 // @Failure     500 {object} response
-// @Router      /subscription [post]
+// @Router      /v1/auth/login [post]
 // Author: https://github.com/lintang-b-s
 func (r *authRoutes) loginUser(c *gin.Context) {
 
@@ -120,7 +121,7 @@ func (r *authRoutes) loginUser(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		r.l.Error(err, "http - v1 - loginUser")
-		ErrorResponse(c, http.StatusInternalServerError, "invalid request body")
+		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -163,3 +164,19 @@ func (r *authRoutes) loginUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, resp)
 }
+
+//// @Summary     renew Access Token using user refreshToken
+//// @Description    renew Access Token using user refreshToken
+//// @ID          renewAccessToken
+//// @Tags  	    user
+//// @Accept      json
+//// @Produce     json
+//// @Param       request body renewAccessTokenRequest true "Login  user"
+//// @Success     200 {object} renewAccessTokenResponse
+//// @Failure     400 {object} response
+//// @Failure     500 {object} response
+//// @Router      /v1/auth/token [post]
+//// Author: https://github.com/lintang-b-s
+//func (r *authRoutes) renewAccessToken(c *gin.Context) {
+//
+//}

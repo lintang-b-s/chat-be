@@ -1,0 +1,10 @@
+
+
+DROP TABLE IF EXISTS users;
+
+DROP TABLE IF EXISTS sessions;
+
+DROP TABLE IF EXISTS private_chats;
+
+DROP TABLE IF EXISTS group_chats;
+

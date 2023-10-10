@@ -19,5 +19,5 @@ rabbitmq:
 redis:
   server_address: ':5555'
   host: chat-redis
-  address: 6379
-  password: 
+  address: 6378
+  password: passwordRedis

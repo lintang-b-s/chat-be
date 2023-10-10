@@ -11,10 +11,20 @@ services:
       POSTGRES_PASSWORD: 'pass'
       POSTGRES_DB: 'postgres'
     ports:
-      - 5432:5432
+      - 5431:5432
+
+  pg-admin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@email.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_LISTEN_PORT=5050
+    ports:
+      - 5050:5050
 
 
-#  app:
+
+  #  app:
 #    build: .
 #    container_name: app
 #    image: app
@@ -33,6 +43,10 @@ services:
     container_name: redis
     hostname: redis
     restart: always
+    ports:
+      - 6378:6379
+    command: >
+      --requirepass passwordRedis
 
 
 volumes:
