@@ -3,6 +3,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -41,6 +42,9 @@ func Run(cfg *config.Config) {
 	// gorm repo
 	gorm, err := gorm.NewGorm()
 
+	// jwt
+	jwtTokenMaker, err := jwt.NewJWTMaker("secretKeyuntukJWT")
+
 	// Use case
 	translationUseCase := usecase.New(
 		repo.New(pg),
@@ -49,6 +53,8 @@ func Run(cfg *config.Config) {
 
 	authUseCase := usecase.NewAuthUseCase(
 		repo.NewAuthRepo(gorm.Pool),
+		jwtTokenMaker,
+		repo.NewSessionRepo(gorm.Pool),
 	)
 
 	// RabbitMQ RPC Server

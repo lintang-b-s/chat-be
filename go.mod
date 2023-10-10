@@ -22,7 +22,10 @@ require (
 	github.com/swaggo/swag v1.7.6
 )
 
-require github.com/jackc/pgx/v5 v5.3.1 // indirect
+require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/jackc/pgx/v5 v5.3.1 // indirect
+)
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect

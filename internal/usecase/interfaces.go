@@ -29,11 +29,19 @@ type (
 
 	// Auth Use Case
 	Auth interface {
-		Register(context.Context, entity.CreateUserRequest) (entity.CreateUserResponse, error)
+		Register(context.Context, entity.CreateUserRequest) (entity.User, error)
+		Login(context.Context, entity.LoginUserRequest) (entity.LoginUserResponse, error)
 	}
 
 	// AuthRepo
 	AuthRepo interface {
-		CreateUser(context.Context, entity.CreateUserRequest) (entity.CreateUserResponse, error)
+		CreateUser(context.Context, entity.CreateUserRequest) (entity.User, error)
+		GetUser(context.Context, string) (entity.GetUser, error)
+		CreateSession(context.Context, entity.CreateSessionRequest) (entity.Session, error)
+	}
+
+	// SessionRepo
+	SessionRepo interface {
+		CreateSession(context.Context, entity.CreateSessionRequest) (entity.Session, error)
 	}
 )
