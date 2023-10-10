@@ -1,5 +1,5 @@
 # chat-be
-chat backend using redis and websocket
+highly scalable chat backend api using websocket, redis, and postgres.
 
 
 ## 1 on 1 Chat Flow 
@@ -34,6 +34,14 @@ chat backend using redis and websocket
 ```
     go install -tags "postgres,mysql" github.com/golang-migrate/migrate/v4/cmd/migrate@latest
     untuk mengecek sudah diinstal belum: ketik migrate
+```
+
+3. install makefile
+```
+    windowss: https://linuxhint.com/run-makefile-windows/
+    mac: https://formulae.brew.sh/formula/make
+    linux:  https://www.youtube.com/watch?v=PLFzCOPPrPc
+    
 ```
 
 3. install docker

@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/google/uuid"
 
 	"github.com/lintangbs/chat-be/internal/entity"
 )
@@ -31,6 +32,7 @@ type (
 	Auth interface {
 		Register(context.Context, entity.CreateUserRequest) (entity.User, error)
 		Login(context.Context, entity.LoginUserRequest) (entity.LoginUserResponse, error)
+		RenewAccessToken(context.Context, entity.RenewAccessTokenRequest) (entity.RenewAccessTokenResponse, error)
 	}
 
 	// AuthRepo
@@ -42,5 +44,6 @@ type (
 	// SessionRepo
 	SessionRepo interface {
 		CreateSession(context.Context, entity.CreateSessionRequest) (entity.Session, error)
+		GetSession(context.Context, uuid.UUID) (entity.Session, error)
 	}
 )

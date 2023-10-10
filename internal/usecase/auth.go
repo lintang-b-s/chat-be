@@ -55,7 +55,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 
 	accessToken, accessPayload, err := uc.jwtTokenMaker.CreateToken(
 		l.Email,
-		3*time.Hour,
+		7*time.Hour,
 	)
 
 	if err != nil {
@@ -101,6 +101,44 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 		RefreshToken:          refreshToken,
 		RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
 		User:                  userRes,
+	}
+	return res, nil
+}
+
+func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAccessTokenRequest) (entity.RenewAccessTokenResponse, error) {
+	refreshPayload, err := uc.jwtTokenMaker.VerifyToken(r.RefreshToken)
+	if err != nil {
+		// Unauthorized , token yg dikrim tidak sama dg yg ada di database
+		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.jwtTokenMaker.VerifyToken: %w", err)
+	}
+
+	session, err := uc.sessionRepo.GetSession(ctx, refreshPayload.ID)
+	if err != nil {
+		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.sessionRepo.GetSession: %w", err)
+	}
+
+	if session.Email != refreshPayload.Email {
+		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
+	}
+	if session.RefreshToken != r.RefreshToken {
+		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
+	}
+
+	accessToken, accessTokenPayload, err := uc.jwtTokenMaker.CreateToken(
+		refreshPayload.Email,
+		7*time.Hour,
+	)
+	if err != nil {
+		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.jwtTokenMaker.CreateToken: %w", err)
+	}
+
+	res := entity.RenewAccessTokenResponse{
+		AccessToken:          accessToken,
+		AccessTokenExpiresAt: accessTokenPayload.ExpiredAt,
 	}
 	return res, nil
 }

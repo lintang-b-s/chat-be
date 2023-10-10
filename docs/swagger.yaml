@@ -78,6 +78,20 @@ definitions:
       user:
         $ref: '#/definitions/v1.userResponse'
     type: object
+  v1.renewAccessTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  v1.renewAccessTokenResponse:
+    properties:
+      access_token:
+        type: string
+      access_token_expires_at:
+        type: string
+    type: object
   v1.response:
     properties:
       error:
@@ -89,7 +103,7 @@ definitions:
       email:
         type: string
       id:
-        type: integer
+        type: string
       username:
         type: string
     type: object
@@ -211,6 +225,37 @@ paths:
           schema:
             $ref: '#/definitions/v1.response'
       summary: Register User in Db
+      tags:
+      - user
+  /v1/auth/token:
+    post:
+      consumes:
+      - application/json
+      description: renew Access Token using user refreshToken
+      operationId: renewAccessToken
+      parameters:
+      - description: Login  user
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.renewAccessTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.renewAccessTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      summary: renew Access Token using user refreshToken
       tags:
       - user
 swagger: "2.0"

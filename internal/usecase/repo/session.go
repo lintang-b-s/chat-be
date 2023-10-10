@@ -46,3 +46,23 @@ func (r *SessionRepo) CreateSession(ctx context.Context, c entity.CreateSessionR
 	}
 	return session, nil
 }
+
+func (r *SessionRepo) GetSession(ctx context.Context, refreshTokkenId uuid.UUID) (entity.Session, error) {
+	var sessionDb Session
+
+	result := r.db.Where(&Session{ID: refreshTokkenId}).First(&sessionDb)
+
+	if err := result.Error; err != nil {
+		return entity.Session{}, err
+	}
+
+	session := entity.Session{
+		ID:           sessionDb.ID,
+		Email:        sessionDb.Email,
+		RefreshToken: sessionDb.RefreshToken,
+		ExpiresAt:    sessionDb.ExpiresAt,
+		CreatedAt:    sessionDb.CreatedAt,
+	}
+
+	return session, nil
+}

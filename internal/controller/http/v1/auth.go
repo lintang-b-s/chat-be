@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase"
+	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"github.com/lintangbs/chat-be/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -25,6 +26,7 @@ func newAuthRoutes(handler *gin.RouterGroup, a usecase.Auth, l logger.Interface)
 	{
 		h.POST("/register", r.registerUser)
 		h.POST("/login", r.loginUser)
+		h.POST("/token", r.renewAccessToken)
 	}
 
 }
@@ -80,7 +82,7 @@ func (r *authRoutes) registerUser(c *gin.Context) {
 		}
 
 		r.l.Error("http - v1- registerUser")
-		ErrorResponse(c, http.StatusInternalServerError, "auth service problems: "+errorM.Error())
+		ErrorResponse(c, http.StatusInternalServerError, "register service problems: "+errorM.Error())
 		return
 	}
 
@@ -146,7 +148,7 @@ func (r *authRoutes) loginUser(c *gin.Context) {
 		}
 
 		r.l.Error("http - v1- loginUser")
-		ErrorResponse(c, http.StatusInternalServerError, "translation service problems: "+err.Error())
+		ErrorResponse(c, http.StatusInternalServerError, "loginUser service problems: "+err.Error())
 		return
 	}
 
@@ -165,18 +167,70 @@ func (r *authRoutes) loginUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
-//// @Summary     renew Access Token using user refreshToken
-//// @Description    renew Access Token using user refreshToken
-//// @ID          renewAccessToken
-//// @Tags  	    user
-//// @Accept      json
-//// @Produce     json
-//// @Param       request body renewAccessTokenRequest true "Login  user"
-//// @Success     200 {object} renewAccessTokenResponse
-//// @Failure     400 {object} response
-//// @Failure     500 {object} response
-//// @Router      /v1/auth/token [post]
-//// Author: https://github.com/lintang-b-s
-//func (r *authRoutes) renewAccessToken(c *gin.Context) {
-//
-//}
+type renewAccessTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type renewAccessTokenResponse struct {
+	AccessToken          string    `json:"access_token"`
+	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
+}
+
+// @Summary     renew Access Token using user refreshToken
+// @Description    renew Access Token using user refreshToken
+// @ID          renewAccessToken
+// @Tags  	    user
+// @Accept      json
+// @Produce     json
+// @Param       request body renewAccessTokenRequest true "Login  user"
+// @Success     200 {object} renewAccessTokenResponse
+// @Failure     400 {object} response
+// @Failure     500 {object} response
+// @Router      /v1/auth/token [post]
+// Author: https://github.com/lintang-b-s
+func (r *authRoutes) renewAccessToken(c *gin.Context) {
+	var request renewAccessTokenRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+
+		unwrapedErr := errors.Unwrap(err)
+		// jika refresh token invalid / expired
+		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
+			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
+			return
+		}
+		// jika row pada db tidak ditemukan
+		if unwrapedErr == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+			return
+		}
+
+		if err.Error() == "Invalid session" {
+			ErrorResponse(c, http.StatusUnauthorized, "Refresh Token mismatch with refresh token in database")
+			return
+		}
+
+		r.l.Error(err, "http - v1 - loginUser")
+		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	renewResponse, err := r.a.RenewAccessToken(
+		c.Request.Context(),
+		entity.RenewAccessTokenRequest{
+			RefreshToken: request.RefreshToken,
+		},
+	)
+	if err != nil {
+		r.l.Error("http - v1- renewAccessToken")
+		ErrorResponse(c, http.StatusInternalServerError, "renewAccessToken service problems: "+err.Error())
+		return
+	}
+
+	resp := renewAccessTokenResponse{
+		AccessToken:          renewResponse.AccessToken,
+		AccessTokenExpiresAt: renewResponse.AccessTokenExpiresAt,
+	}
+
+	c.JSON(http.StatusCreated, resp)
+}

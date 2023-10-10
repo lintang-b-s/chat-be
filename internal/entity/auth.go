@@ -51,3 +51,12 @@ type CreateSessionRequest struct {
 	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }
+
+type RenewAccessTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type RenewAccessTokenResponse struct {
+	AccessToken          string    `json:"access_token"`
+	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
+}

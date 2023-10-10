@@ -185,6 +185,53 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/auth/token": {
+            "post": {
+                "description": "renew Access Token using user refreshToken",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "renew Access Token using user refreshToken",
+                "operationId": "renewAccessToken",
+                "parameters": [
+                    {
+                        "description": "Login  user",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.renewAccessTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.renewAccessTokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -301,6 +348,28 @@ const docTemplate = `{
                 }
             }
         },
+        "v1.renewAccessTokenRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.renewAccessTokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "access_token_expires_at": {
+                    "type": "string"
+                }
+            }
+        },
         "v1.response": {
             "type": "object",
             "properties": {
@@ -317,7 +386,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "username": {
                     "type": "string"
