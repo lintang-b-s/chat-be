@@ -12,15 +12,15 @@ type CreateUserRequest struct {
 }
 
 type User struct {
-	Id       uint   `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	Id       uuid.UUID `json:"id"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
 }
 type GetUser struct {
-	Id             uint   `json:"id"`
-	Username       string `json:"username"`
-	Email          string `json:"email"`
-	HashedPassword string `json:"hashed_password"`
+	Id             uuid.UUID `json:"id"`
+	Username       string    `json:"username"`
+	Email          string    `json:"email"`
+	HashedPassword string    `json:"hashed_password"`
 }
 
 type LoginUserRequest struct {

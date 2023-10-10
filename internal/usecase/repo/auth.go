@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"gorm.io/gorm"
 	"time"
@@ -14,6 +15,7 @@ type AuthRepo struct {
 
 type User struct {
 	gorm.Model
+	ID             uuid.UUID
 	Username       string
 	HashedPassword string
 	Email          string
@@ -36,13 +38,15 @@ func (r *AuthRepo) CreateUser(ctx context.Context, e entity.CreateUserRequest) (
 		return entity.User{}, fmt.Errorf("AuthRepo - Createuser - r.db.Where: User With same username or email already exists")
 	}
 
-	user := User{Username: e.Username, HashedPassword: e.Password, Email: e.Password}
+	userId := uuid.New()
+	user := User{ID: userId, Username: e.Username, HashedPassword: e.Password, Email: e.Email}
 	if result := r.db.Create(&user); result.Error != nil {
 		// internal server error
 		return entity.User{}, fmt.Errorf("AuthRepo - Createuser - r.db.Create: %w", result.Error)
 	}
 
 	res := entity.User{
+		Id:       userId,
 		Username: user.Username,
 		Email:    user.Email,
 	}

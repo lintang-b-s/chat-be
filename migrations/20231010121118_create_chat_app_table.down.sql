@@ -8,3 +8,4 @@ DROP TABLE IF EXISTS private_chats;
 
 DROP TABLE IF EXISTS group_chats;
 
+DROP TABLE IF EXISTS contacts;

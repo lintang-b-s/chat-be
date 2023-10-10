@@ -64,6 +64,16 @@ chat backend using redis and websocket
     migrate -database "postgres://user:pass@localhost:5431/chat?sslmode=disable" -path migrations up
 ```
 
+9. membuat dokumentasi swaggger
+```
+    make swag-v1
+```
+
+9. menjalankan aplikasi
+```
+    make run
+```
+
 
 ### ref
 - code template from https://github.com/evrone/go-clean-template

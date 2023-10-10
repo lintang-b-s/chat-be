@@ -32,13 +32,13 @@ func newAuthRoutes(handler *gin.RouterGroup, a usecase.Auth, l logger.Interface)
 type createUserRequest struct {
 	Username string `json:"username" binding:"required,alphanum"`
 	Password string `json:"password" binding:"required,min=3"`
-	Email    string `json:"email" binding:"required, email"`
+	Email    string `json:"email" binding:"required,email"`
 }
 
 type userResponse struct {
-	Id       uint   `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	Id       uuid.UUID `json:"id"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
 }
 
 // @Summary     Register User in Db
@@ -84,7 +84,7 @@ func (r *authRoutes) registerUser(c *gin.Context) {
 		return
 	}
 
-	resp := userResponse{Username: user.Username, Email: user.Email}
+	resp := userResponse{Id: user.Id, Username: user.Username, Email: user.Email}
 	c.JSON(http.StatusCreated, resp)
 }
 
