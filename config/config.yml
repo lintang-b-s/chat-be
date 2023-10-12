@@ -11,13 +11,15 @@ logger:
 
 postgres:
   pool_max: 2
+  username: postgres
+  password: pass
 
 rabbitmq:
   rpc_server_exchange: 'rpc_server'
   rpc_client_exchange: 'rpc_client'
 
 redis:
-  server_address: ':5555'
-  host: chat-redis
+  server_address: ':6379'
+  host: chat-redispkg
   address: 6378
   password: passwordRedis

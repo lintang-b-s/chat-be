@@ -16,6 +16,10 @@ highly scalable chat backend api using websocket, redis, and postgres.
 - 
 
 ## Quick Start
+branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https://github.com/cloudwego/netpoll)
+.switch ke branch windows utk bisa jalankan di os manapun
+
+
 1. install golang: 
 ```
  Windows: https://www.youtube.com/watch?v=xYpqI7GRrvE
@@ -61,7 +65,7 @@ highly scalable chat backend api using websocket, redis, and postgres.
     migrate create -ext sql -dir migrations create_chat_app_table
 ```
 
-6. open pg-admin in localhost:5050. create database chat
+6. open pg-admin in localhost:5050 or enter postggres cli. create database chat
 7. execute this command in query-tool pg-admin
 ```
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -69,7 +73,7 @@ highly scalable chat backend api using websocket, redis, and postgres.
 ```
 8. menjalankan migration
 ```
-    migrate -database "postgres://user:pass@localhost:5431/chat?sslmode=disable" -path migrations up
+    migrate -database "postgres://postgres:pass@localhost:5432/chat?sslmode=disable" -path migrations up
 ```
 
 9. membuat dokumentasi swaggger
@@ -80,6 +84,14 @@ highly scalable chat backend api using websocket, redis, and postgres.
 9. menjalankan aplikasi
 ```
     make run
+```
+
+10. import postman collection di docs/pelatihan umum(chat app)postman_collection.json & jalankan request di postman
+
+11. buka collection https://orange-comet-51695.postman.co/workspace/netflik~35c0e208-27dd-4c2a-a67f-44e4ee221c8b/collection/6527d3d16150314c8cd09241?action=share&creator=23925296
+ & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
+```
+    jalankan request websocket di link postman tsb
 ```
 
 

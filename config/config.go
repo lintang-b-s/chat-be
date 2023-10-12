@@ -9,10 +9,11 @@ import (
 type (
 	// Config -.
 	Config struct {
-		App   `yaml:"app"`
-		HTTP  `yaml:"http"`
-		Log   `yaml:"logger"`
-		Redis `yaml:"redis"`
+		App      `yaml:"app"`
+		HTTP     `yaml:"http"`
+		Log      `yaml:"logger"`
+		Redis    `yaml:"redis"`
+		Postgres `yaml:"postgres"`
 	}
 
 	// App -.
@@ -32,8 +33,13 @@ type (
 	}
 
 	Redis struct {
-		Address  string `env-required:"true" yaml:"server_address" env:"SERVER_ADDRESS"`
+		Address  string `env-required:"true" yaml:"server_address" `
 		Password string `env-required:"true" yaml:"password" env:"REDIS_PASSWORD"`
+	}
+
+	Postgres struct {
+		Username string `env-required:"true" yaml:"username"`
+		Password string `env-required:"true" yaml:"password"`
 	}
 )
 

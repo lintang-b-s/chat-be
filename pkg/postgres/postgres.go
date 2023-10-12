@@ -17,6 +17,10 @@ const (
 	_defaultConnTimeout  = time.Second
 )
 
+type Tes struct {
+	sstt string
+}
+
 // Postgres -.
 type Postgres struct {
 	maxPoolSize  int

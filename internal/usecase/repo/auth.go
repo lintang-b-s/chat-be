@@ -27,7 +27,7 @@ func NewAuthRepo(db *gorm.DB) *AuthRepo {
 	return &AuthRepo{db}
 }
 
-func (r *AuthRepo) CreateUser(ctx context.Context, e entity.CreateUserRequest) (entity.User, error) {
+func (r *AuthRepo) CreateUser(ctx context.Context, e entity.CreateUserRequest) (entity.UserResponse, error) {
 	// e.password sudah dihash
 	var userDb User
 
@@ -35,17 +35,17 @@ func (r *AuthRepo) CreateUser(ctx context.Context, e entity.CreateUserRequest) (
 
 	if result.RowsAffected > 0 {
 		//bad request
-		return entity.User{}, fmt.Errorf("AuthRepo - Createuser - r.db.Where: User With same username or email already exists")
+		return entity.UserResponse{}, fmt.Errorf("AuthRepo - Createuser - r.db.Where: User With same username or email already exists")
 	}
 
 	userId := uuid.New()
 	user := User{ID: userId, Username: e.Username, HashedPassword: e.Password, Email: e.Email}
 	if result := r.db.Create(&user); result.Error != nil {
 		// internal server error
-		return entity.User{}, fmt.Errorf("AuthRepo - Createuser - r.db.Create: %w", result.Error)
+		return entity.UserResponse{}, fmt.Errorf("AuthRepo - Createuser - r.db.Create: %w", result.Error)
 	}
 
-	res := entity.User{
+	res := entity.UserResponse{
 		Id:       userId,
 		Username: user.Username,
 		Email:    user.Email,

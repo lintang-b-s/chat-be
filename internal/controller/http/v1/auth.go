@@ -103,6 +103,7 @@ type loginUserResponse struct {
 	RefreshToken          string       `json:"refresh_token"`
 	RefreshTokenExpiresAt time.Time    `json:"refresh_token_expires_at"`
 	User                  userResponse `json:"user"`
+	Otp                   string       `json:"otp"`
 }
 
 // @Summary     Login User
@@ -160,9 +161,10 @@ func (r *authRoutes) loginUser(c *gin.Context) {
 		RefreshTokenExpiresAt: loginResponse.RefreshTokenExpiresAt,
 		User: userResponse{
 			Id:       loginResponse.User.Id,
-			Username: loginResponse.User.Email,
+			Username: loginResponse.User.Username,
 			Email:    loginResponse.User.Email,
 		},
+		Otp: loginResponse.Otp,
 	}
 	c.JSON(http.StatusCreated, resp)
 }

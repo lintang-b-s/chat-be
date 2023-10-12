@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/lintangbs/chat-be/internal/entity"
+	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/util"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"time"
@@ -13,27 +14,29 @@ type AuthUseCase struct {
 	authRepo      AuthRepo
 	jwtTokenMaker jwt.JwtTokenMaker
 	sessionRepo   SessionRepo
+	otpRepo       redisRepo.OtpRepo
 }
 
-func NewAuthUseCase(r AuthRepo, j jwt.JwtTokenMaker, s SessionRepo) *AuthUseCase {
+func NewAuthUseCase(r AuthRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
 	return &AuthUseCase{
 		authRepo:      r,
 		jwtTokenMaker: j,
 		sessionRepo:   s,
+		otpRepo:       otpRepo,
 	}
 }
 
-func (uc *AuthUseCase) Register(ctx context.Context, c entity.CreateUserRequest) (entity.User, error) {
+func (uc *AuthUseCase) Register(ctx context.Context, c entity.CreateUserRequest) (entity.UserResponse, error) {
 	hashedPassword, err := util.HashPassword(c.Password)
 	if err != nil {
 		// internal server error
-		return entity.User{}, fmt.Errorf("AuthUseCase - Register -  util.HashPassword: %w", err)
+		return entity.UserResponse{}, fmt.Errorf("AuthUseCase - Register -  util.HashPassword: %w", err)
 	}
 	c.Password = hashedPassword
 	createdUser, err := uc.authRepo.CreateUser(ctx, c)
 	if err != nil {
 		// internal server error/ bad request
-		return entity.User{}, fmt.Errorf("AuthUseCase - Register - uc.authRepo.CreateUser: %w", err)
+		return entity.UserResponse{}, fmt.Errorf("AuthUseCase - Register - uc.authRepo.CreateUser: %w", err)
 	}
 
 	return createdUser, nil
@@ -88,9 +91,15 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 		return entity.LoginUserResponse{}, fmt.Errorf("AuthUseCase - Login - uc.sessionRepo.CreateSession: %w", err)
 	}
 
-	userRes := entity.User{
+	//Create Otp for Websocket
+	otp, err := uc.otpRepo.CreateOtp(ctx)
+	if err != nil {
+		return entity.LoginUserResponse{}, fmt.Errorf("AuthUseCase - Login - uc.otpRepo.CreateOtp: %w", err)
+	}
+
+	userRes := entity.UserResponse{
 		Id:       user.Id,
-		Username: user.Email,
+		Username: user.Username,
 		Email:    user.Email,
 	}
 
@@ -101,6 +110,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 		RefreshToken:          refreshToken,
 		RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
 		User:                  userRes,
+		Otp:                   otp,
 	}
 	return res, nil
 }

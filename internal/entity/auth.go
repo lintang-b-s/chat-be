@@ -11,7 +11,7 @@ type CreateUserRequest struct {
 	Email    string `json:"email"`
 }
 
-type User struct {
+type UserResponse struct {
 	Id       uuid.UUID `json:"id"`
 	Username string    `json:"username"`
 	Email    string    `json:"email"`
@@ -29,12 +29,13 @@ type LoginUserRequest struct {
 }
 
 type LoginUserResponse struct {
-	SessionId             uuid.UUID `json:"session_id"`
-	AccessToken           string    `json:"access_token"`
-	AccessTokenExpiresAt  time.Time `json:"access_token_expires_at"`
-	RefreshToken          string    `json:"refresh_token"`
-	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
-	User                  User      `json:"user"`
+	SessionId             uuid.UUID    `json:"session_id"`
+	AccessToken           string       `json:"access_token"`
+	AccessTokenExpiresAt  time.Time    `json:"access_token_expires_at"`
+	RefreshToken          string       `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time    `json:"refresh_token_expires_at"`
+	User                  UserResponse `json:"user"`
+	Otp                   string       `json:"otp"`
 }
 
 type Session struct {
