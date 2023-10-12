@@ -14,6 +14,7 @@ type (
 		Log      `yaml:"logger"`
 		Redis    `yaml:"redis"`
 		Postgres `yaml:"postgres"`
+		EdenAi   `yaml:"edenAi"`
 	}
 
 	// App -.
@@ -41,6 +42,10 @@ type (
 		Username string `env-required:"true" yaml:"username"`
 		Password string `env-required:"true" yaml:"password"`
 	}
+
+	EdenAi struct {
+		ApiKey string `env-required:"true" env:"EDENAI_APIKEY" env-default:"EDENAI_APIKEY"`
+	}
 )
 
 // NewConfig returns app config.
@@ -48,6 +53,11 @@ func NewConfig() (*Config, error) {
 	cfg := &Config{}
 
 	err := cleanenv.ReadConfig("./config/config.yml", cfg)
+
+	err = cleanenv.ReadConfig("./.env", cfg)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
 	}

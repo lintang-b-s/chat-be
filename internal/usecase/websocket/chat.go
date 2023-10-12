@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"io"
 	"log"
@@ -40,13 +41,14 @@ type MessageFromWs struct {
 }
 
 type Chat struct {
-	mu  sync.RWMutex
-	seq uint
-	rds *redispkg.Redis
+	mu        sync.RWMutex
+	seq       uint
+	rds       *redispkg.Redis
+	edenAiApi webapi.EdenAIAPI
 }
 
-func NewChat(rds *redispkg.Redis) *Chat {
-	return &Chat{rds: rds}
+func NewChat(rds *redispkg.Redis, ed webapi.EdenAIAPI) *Chat {
+	return &Chat{rds: rds, edenAiApi: ed}
 }
 
 // Receive reads next message from user's underlying connection.
@@ -68,6 +70,16 @@ func (u *User) Receive() error {
 	msgWs := &MessageFromWs{}
 	if err = json.Unmarshal(msg, msgWs); err != nil {
 		log.Println("json.Unmarshal")
+	}
+
+	if msgWs.Type == "chatBot_private" {
+		resText := u.Chat.edenAiApi.GenerateText(msgWs.Message)
+		msgWs.Message = resText
+		err := Write(u.Conn, ws.OpText, msgWs)
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 
 	if msgWs.Type == "private_chat" {
@@ -166,7 +178,6 @@ func Write(conn io.ReadWriter, op ws.OpCode, message *MessageFromWs) error {
 		log.Println(err)
 		return nil
 	}
-	log.Println("write socket message:", string(data))
 	err = wsutil.WriteServerMessage(conn, op, data)
 	if err != nil {
 		log.Println(err)

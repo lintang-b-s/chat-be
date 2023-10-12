@@ -1,5 +1,5 @@
 # chat-be
-highly scalable chat backend api using websocket, redis, and postgres.
+ chat backend api using websocket, redis, and postgres.
 
 
 ## 1 on 1 Chat Flow 

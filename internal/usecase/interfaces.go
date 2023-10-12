@@ -61,4 +61,10 @@ type (
 	Chat interface {
 		Register(ctx context.Context, conn net.Conn, username string) *websocket.User
 	}
+
+	EdenAiApi interface {
+		GenerateText(text string) string
+	}
+
+
 )

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
+	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/internal/usecase/websocket"
 	"github.com/lintangbs/chat-be/internal/util/gopool"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
@@ -35,7 +36,6 @@ var (
 // Run creates objects via constructors.
 func Run(cfg *config.Config) {
 	l := logger.New(cfg.Log.Level)
-
 	// Redis repo
 	redis, err := redispkg.NewRedis(cfg.Redis.Address, cfg.Redis.Password)
 	if err != nil {
@@ -47,6 +47,9 @@ func Run(cfg *config.Config) {
 
 	// jwt
 	jwtTokenMaker, err := jwt.NewJWTMaker("eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY5NjkyMDA0MywiaWF0IjoxNjk2OTIwMDQzfQ.6x0sgC9T1l64c2IpuCT3WBnw02ZRmHZI-iq4rP5cA9s")
+
+	// EdenAi API
+	edenAi := webapi.NewEdenAIAPI(cfg.EdenAi.ApiKey)
 
 	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - jwtTokenMaker - jwt.NewJWTMaker: %w", err))
@@ -72,7 +75,7 @@ func Run(cfg *config.Config) {
 
 	webSocketUseCase := usecase.NewWebsocket(
 		*redisRepo.NewOtp(redis),
-		*websocket.NewChat(redis),
+		*websocket.NewChat(redis, *edenAi),
 		poller,
 		pool,
 	)
