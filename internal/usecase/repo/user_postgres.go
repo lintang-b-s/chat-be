@@ -186,3 +186,8 @@ func (r *UserRepo) GetUserFriend(ctx context.Context, myUsername string, friendU
 
 	return nil
 }
+
+//// GetAllUsers Mendapatkan semua user
+//func (r *UserRepo) GetAllUsers(ctx context.Context) ([]entity.UserResponse, error) {
+//
+//}

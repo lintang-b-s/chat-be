@@ -4,9 +4,10 @@ package app
 import (
 	"flag"
 	"fmt"
+	"github.com/gin-contrib/cors"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
-	"github.com/lintangbs/chat-be/internal/usecase/websocket"
+	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"github.com/lintangbs/chat-be/internal/util/gopool"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
@@ -75,7 +76,7 @@ func Run(cfg *config.Config) {
 
 	webSocketUseCase := usecase.NewWebsocket(
 		*redisRepo.NewOtp(redis),
-		*websocket.NewChat(redis, *edenAi, *repo.NewUserRepo(gorm.Pool)),
+		*websocketc.NewChat(redis, *edenAi, *repo.NewUserRepo(gorm.Pool)),
 		poller,
 		pool,
 	)
@@ -86,6 +87,9 @@ func Run(cfg *config.Config) {
 
 	// HTTP Server
 	handler := gin.New()
+
+	handler.Use(cors.Default())
+
 	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, *contactUseCase, jwtTokenMaker)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 

@@ -3,32 +3,37 @@ package usecase
 import (
 	"context"
 	"errors"
-	"github.com/gobwas/ws"
+	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
-	"github.com/lintangbs/chat-be/internal/usecase/websocket"
+	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"github.com/lintangbs/chat-be/internal/util/gopool"
 	"github.com/mailru/easygo/netpoll"
 	"net/http"
 )
 
 var (
-	WebsocketConnectionError   = errors.New("websocket connection error")
-	WebsocketUnauthorizedError = errors.New("websocket unauthorized error")
+	WebsocketConnectionError   = errors.New("websocketc connection error")
+	WebsocketUnauthorizedError = errors.New("websocketc unauthorized error")
 )
 
-// WebsocketUseCase bussines logic websocket
+// WebsocketUseCase bussines logic websocketc
 type WebsocketUseCase struct {
 	otpRepo redisRepo.OtpRepo
-	chat    websocket.Chat
+	chat    websocketc.Chat
 	poller  netpoll.Poller
 	gopool  *gopool.Pool
 }
 
 // NewWebsocket Create new websocketUseCase
-func NewWebsocket(otp redisRepo.OtpRepo, chat websocket.Chat, p netpoll.Poller, gp *gopool.Pool) *WebsocketUseCase {
+func NewWebsocket(otp redisRepo.OtpRepo, chat websocketc.Chat, p netpoll.Poller, gp *gopool.Pool) *WebsocketUseCase {
 	return &WebsocketUseCase{
 		otp, chat, p, gp,
 	}
+}
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Request, ctx context.Context) error {
@@ -56,7 +61,7 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 	// it and stores it as a chat user in Chat instance.
 	//
 	// We will call it below within accept() loop.
-	conn, _, _, err := ws.UpgradeHTTP(r, w)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return WebsocketConnectionError
 	}
@@ -66,10 +71,7 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 
 	// Create netpoll event descriptor for conn.
 	// We want to handle only read events of it.
-	desc := netpoll.Must(netpoll.HandleRead(conn))
-
-	// Subscribe to redis channel (channel username user)
-	//channelPubSub := uc.rdsChanRepo.SubscribeChannel(ctx, username)
+	desc := netpoll.Must(netpoll.HandleRead(conn.UnderlyingConn()))
 
 	// Subscribe to events about conn.
 	uc.poller.Start(desc, func(ev netpoll.Event) {

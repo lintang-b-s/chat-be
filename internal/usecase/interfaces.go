@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
-	"github.com/lintangbs/chat-be/internal/usecase/websocket"
+	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"net"
 	"net/http"
 )
@@ -44,6 +44,7 @@ type (
 		AddFriend(context.Context, string, string) (entity.UserResponse, error)
 		GetUserFriends(context.Context, string) (entity.UserResponse, error)
 		GetUserFriend(context.Context, string, string) error
+		//GetAllUsers(context.Context) ([]entity.UserResponse, error)
 	}
 
 	// SessionRepo
@@ -65,7 +66,7 @@ type (
 
 	// Chat
 	Chat interface {
-		Register(context.Context, net.Conn, string) *websocket.User
+		Register(context.Context, net.Conn, string) *websocketc.User
 	}
 
 	// EdenAiApi

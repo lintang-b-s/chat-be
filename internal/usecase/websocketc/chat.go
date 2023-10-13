@@ -1,18 +1,16 @@
-package websocket
+package websocketc
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
+	"github.com/gorilla/websocket"
+
 	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
-	"io"
 	"log"
-	"net"
 	"strings"
 	"sync"
 	"time"
@@ -23,8 +21,10 @@ import (
 // That is, there are no active reader or writer. Some other layer of the
 // application should call Receive() to read user's incoming message.
 type User struct {
-	io   sync.Mutex
-	Conn io.ReadWriteCloser
+	io sync.Mutex
+	//Conn   io.ReadWriteCloser
+	//WsConn net.Conn
+	Conn *websocket.Conn
 
 	Id   uint
 	Name string
@@ -53,20 +53,36 @@ func NewChat(rds *redispkg.Redis, ed webapi.EdenAIAPI, pg repo.UserRepo) *Chat {
 	return &Chat{rds: rds, edenAiApi: ed, pg: pg}
 }
 
+var (
+	// pongWait : berapa lama server menunggu message pong dari client
+	pongWait = 10 * time.Second
+	// pingInterval : setiap 0.9 detik server mengirim ping message ke client. pingInterval haruslah lebih kecil dari pongWait
+	pingInterval = (pongWait * 9) / 10
+)
+
 // Receive reads next message from user's underlying connection.
 // It blocks until full message received.
 func (u *User) Receive() error {
-	//req, err := u.readRequest()
-	msg, _, err := wsutil.ReadClientData(u.Conn)
 
-	if err != nil {
+	// Set Max Size of Messages in Bytes
+	u.Conn.SetReadLimit(1024)
+
+	// Configure Wait time for Pong response, use Current time + pongWait
+	// This has to be done here to set the first initial timer.
+	if err := u.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		log.Println(err)
 		u.Conn.Close()
 		return err
 	}
 
-	if msg == nil {
-		// Handled some control message.
-		return nil
+	u.Conn.SetPongHandler(u.pongHandler)
+
+	// ReadMessage dari client websocket
+	_, msg, err := u.Conn.ReadMessage()
+
+	if err != nil {
+		u.Conn.Close()
+		return err
 	}
 
 	msgWs := &MessageFromWs{}
@@ -79,7 +95,7 @@ func (u *User) Receive() error {
 		// private chat dg chatbot
 		resText := u.Chat.edenAiApi.GenerateText(msgWs.Message)
 		msgWs.Message = resText
-		err = Write(u.Conn, ws.OpText, msgWs)
+		err = u.Write(websocket.TextMessage, msgWs)
 		if err != nil {
 			log.Println("Write: ", err)
 			return err
@@ -93,7 +109,7 @@ func (u *User) Receive() error {
 		if isFriendErr != nil {
 			fmt.Println("u.Chat.pg.GetUserFriend: ", isFriendErr)
 			msgWs.Message = msgWs.RecipientUsername + " is not your friend"
-			err = Write(u.Conn, ws.OpText, msgWs)
+			err = u.Write(websocket.TextMessage, msgWs)
 			if err != nil {
 				log.Println("Write: ", err)
 				return err
@@ -109,6 +125,12 @@ func (u *User) Receive() error {
 	}
 
 	return nil
+}
+
+// pongHandler handle message pong yang dikirim oleh client, mereset durasi readdeadline
+func (u *User) pongHandler(pongMsg string) error {
+	log.Println("pong received from client !!")
+	return u.Conn.SetReadDeadline(time.Now().Add(pongWait))
 }
 
 // Broadcast sends message to all alive users.
@@ -130,7 +152,7 @@ func (c *Chat) Broadcast(to string, msg *MessageFromWs) error {
 }
 
 // Register registers new connection as a User.
-func (c *Chat) Register(ctx context.Context, conn net.Conn, username string) *User {
+func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string) *User {
 	user := &User{
 		Chat: c,
 		Conn: conn,
@@ -161,15 +183,22 @@ func (c *Chat) Register(ctx context.Context, conn net.Conn, username string) *Us
 	}
 	c.rds.ChannelsPubSubSync.Unlock()
 
-	go c.subscribePubSubAndSendToClient(conn, newChannelPubSub)
+	go user.subscribePubSubAndSendToClient(newChannelPubSub)
 
 	return user
 }
 
 // subscribePubSubAndSendToClient subscribe channel (nama channel username si user) , setiap ada message kirim ke client ini/recipient
-func (c *Chat) subscribePubSubAndSendToClient(conn net.Conn, channelRedis *redispkg.ChannelPubSub) {
+func (u *User) subscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubSub) {
 	defer channelRedis.Closed()
+	// Create a ticker that triggers a ping at given interval
+	ticker := time.NewTicker(pingInterval)
+	defer func() {
+		ticker.Stop()
+		u.Conn.Close()
+	}()
 	for {
+
 		select {
 		case data := <-channelRedis.Channel():
 			msg := &MessageFromWs{}
@@ -178,26 +207,36 @@ func (c *Chat) subscribePubSubAndSendToClient(conn net.Conn, channelRedis *redis
 			err := dec.Decode(msg)
 			if err != nil {
 				log.Println("dec.Decode", err)
+				return
 			} else {
-				err := Write(conn, ws.OpText, msg)
+				err = u.Write(websocket.TextMessage, msg)
 				if err != nil {
 					log.Println(err)
+					return
 				}
 			}
+		case <-ticker.C:
 
+			log.Println("send ping messages to client!!")
+
+			err := u.Conn.WriteMessage(websocket.PingMessage, []byte{})
+			//fmt.Println("pingCode: ", ws.OpPing)
+			//s, err := conn.Write(ws.CompiledPing)
+			if err != nil {
+				log.Println("wsutil.WriteServerMessage", err)
+				return
+			}
 		}
 	}
 }
 
-// Write to websocket client
-func Write(conn io.ReadWriter, op ws.OpCode, message *MessageFromWs) error {
-
+func (u *User) Write(op int, message *MessageFromWs) error {
 	data, err := json.Marshal(message)
 	if err != nil {
 		log.Println("json.Marshal", err)
 		return err
 	}
-	err = wsutil.WriteServerMessage(conn, op, data)
+	u.Conn.WriteMessage(op, data)
 	if err != nil {
 		log.Println("json.Marshal", err)
 		return err

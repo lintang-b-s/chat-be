@@ -19,7 +19,7 @@ func NewWebsocketRoutes(h *gin.RouterGroup, w usecase.Websocket, l logger.Interf
 	h.GET("/ws", r.websocketHandlerRoute)
 }
 
-// websocketHandler handler saat buka koneksi websocket
+// websocketHandler handler saat buka koneksi websocketc
 func (r *WebbsocketRoutes) websocketHandlerRoute(c *gin.Context) {
 	err := r.w.WebsocketHandler(c.Writer, c.Request, c.Request.Context())
 	if err != nil {
