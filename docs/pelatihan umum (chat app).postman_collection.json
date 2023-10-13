@@ -69,7 +69,20 @@
 					"response": []
 				},
 				{
-					"name": "post login",
+					"name": "post login (user lintang)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"var access_token = jsonData.access_token;",
+									"pm.globals.set(\"acToken_lintang\", access_token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -98,7 +111,21 @@
 					"response": []
 				},
 				{
-					"name": "post login User 2",
+					"name": "post login (user lintang2)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"var access_token = jsonData.access_token;",
+									"pm.globals.set(\"acToken_lintan2\", access_token);",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -156,6 +183,92 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "contact",
+			"item": [
+				{
+					"name": "add contact lintang2 (user lintang)",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "accessTokenUrl",
+									"value": "http://keycloak:8080/realms/spring-boot-microservices-realm/protocol/openid-connect/token",
+									"type": "string"
+								},
+								{
+									"key": "clientSecret",
+									"value": "OlLIrucXOXgDap2kcGPiCvJzXgekWWuw",
+									"type": "string"
+								},
+								{
+									"key": "scope",
+									"value": "openid offline_access",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "spring-cloud-client",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "authUrl",
+									"value": "http://localhost:5005/auth/login",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "token",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"friend_username\": \"lintang2\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/v1/contact/add/",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"contact",
+								"add",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "acToken-lintang",
+			"value": ""
 		}
 	]
 }
