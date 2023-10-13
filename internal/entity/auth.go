@@ -12,9 +12,10 @@ type CreateUserRequest struct {
 }
 
 type UserResponse struct {
-	Id       uuid.UUID `json:"id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
+	Id       uuid.UUID      `json:"id"`
+	Username string         `json:"username"`
+	Email    string         `json:"email"`
+	Friends  []UserResponse `json:"friends"`
 }
 type GetUser struct {
 	Id             uuid.UUID `json:"id"`

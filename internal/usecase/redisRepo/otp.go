@@ -21,7 +21,7 @@ func (r *OtpRepo) GetOtp(otp string, ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = r.rds.Client.Del(ctx, "otp", otp).Err()
+	err = r.rds.Client.HDel(ctx, "otp", otp).Err()
 	if err != nil {
 		return err
 	}

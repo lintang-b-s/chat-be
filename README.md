@@ -12,8 +12,7 @@
 ## Message table for 1 on 1 chat
 ![message table for 1 on 1 chat](https://res.cloudinary.com/dex4u3rw4/image/upload/v1696433591/figure-12-9-356WMC2A_o15qjo.webp)
 
-- message_id menggunakan https://github.com/sony/sonyflake , shgg sudah terurut berdasarkan time. New rows memiliki ID yang lebih besar dibandingkan rows yg lama.
-- 
+
 
 ## Quick Start
 branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https://github.com/cloudwego/netpoll)
@@ -55,7 +54,16 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
         
 ```
 
-4. buat container postgresql, redis di docker
+4. jalankan redis & postgresqql di local;
+```
+ redis:
+  mac: brew services start redis
+  windows: https://linuxhint.com/install-run-redis-windows/
+
+  
+```
+
+4. (optional jika belum install redis & postgres) buat container postgresql, redis di docker
 ```
     docker compose up -d
 ```
@@ -76,19 +84,21 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
     migrate -database "postgres://postgres:pass@localhost:5432/chat?sslmode=disable" -path migrations up
 ```
 
-9. membuat dokumentasi swaggger
+9. buat file .env dan isi sesuai .env.example
+
+10. membuat dokumentasi swaggger
 ```
     make swag-v1
 ```
 
-9. menjalankan aplikasi
+11. menjalankan aplikasi
 ```
     make run
 ```
 
-10. import postman collection di docs/pelatihan umum(chat app)postman_collection.json & jalankan request di postman
+12. import postman collection di docs/pelatihan umum(chat app)postman_collection.json & jalankan request di postman
 
-11. buka collection https://orange-comet-51695.postman.co/workspace/netflik~35c0e208-27dd-4c2a-a67f-44e4ee221c8b/collection/6527d3d16150314c8cd09241?action=share&creator=23925296
+13. buka collection https://orange-comet-51695.postman.co/workspace/netflik~35c0e208-27dd-4c2a-a67f-44e4ee221c8b/collection/6527d3d16150314c8cd09241?action=share&creator=23925296
  & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
 ```
     jalankan request websocket di link postman tsb

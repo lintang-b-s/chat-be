@@ -16,11 +16,11 @@ func NewWebsocketRoutes(h *gin.RouterGroup, w usecase.Websocket, l logger.Interf
 
 	r := &WebbsocketRoutes{w, l}
 
-	h.GET("/ws", r.websocketHandler)
+	h.GET("/ws", r.websocketHandlerRoute)
 }
 
 // websocketHandler handler saat buka koneksi websocket
-func (r *WebbsocketRoutes) websocketHandler(c *gin.Context) {
+func (r *WebbsocketRoutes) websocketHandlerRoute(c *gin.Context) {
 	err := r.w.WebsocketHandler(c.Writer, c.Request, c.Request.Context())
 	if err != nil {
 		if err == usecase.WebsocketUnauthorizedError {

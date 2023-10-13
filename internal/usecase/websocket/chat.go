@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"io"
@@ -45,10 +46,11 @@ type Chat struct {
 	seq       uint
 	rds       *redispkg.Redis
 	edenAiApi webapi.EdenAIAPI
+	pg        repo.UserRepo
 }
 
-func NewChat(rds *redispkg.Redis, ed webapi.EdenAIAPI) *Chat {
-	return &Chat{rds: rds, edenAiApi: ed}
+func NewChat(rds *redispkg.Redis, ed webapi.EdenAIAPI, pg repo.UserRepo) *Chat {
+	return &Chat{rds: rds, edenAiApi: ed, pg: pg}
 }
 
 // Receive reads next message from user's underlying connection.
@@ -69,23 +71,40 @@ func (u *User) Receive() error {
 
 	msgWs := &MessageFromWs{}
 	if err = json.Unmarshal(msg, msgWs); err != nil {
-		log.Println("json.Unmarshal")
+		log.Println("json.Unmarshal: ", err)
+		return err
 	}
 
 	if msgWs.Type == "chatBot_private" {
+		// private chat dg chatbot
 		resText := u.Chat.edenAiApi.GenerateText(msgWs.Message)
 		msgWs.Message = resText
-		err := Write(u.Conn, ws.OpText, msgWs)
+		err = Write(u.Conn, ws.OpText, msgWs)
 		if err != nil {
-			log.Println(err)
+			log.Println("Write: ", err)
+			return err
 		}
 
 	}
 
 	if msgWs.Type == "private_chat" {
+		// private chat dg user lain yang sudah ditambahkan kontaknya
+		isFriendErr := u.Chat.pg.GetUserFriend(context.Background(), msgWs.SenderUsername, msgWs.RecipientUsername)
+		if isFriendErr != nil {
+			fmt.Println("u.Chat.pg.GetUserFriend: ", isFriendErr)
+			msgWs.Message = msgWs.RecipientUsername + " is not your friend"
+			err = Write(u.Conn, ws.OpText, msgWs)
+			if err != nil {
+				log.Println("Write: ", err)
+				return err
+			}
+			return isFriendErr
+
+		}
 		err = u.Chat.Broadcast(msgWs.RecipientUsername, msgWs)
 		if err != nil {
-			fmt.Println("u.chat.Broadcast")
+			fmt.Println("u.chat.Broadcast: ", err)
+			return err
 		}
 	}
 
@@ -175,12 +194,12 @@ func Write(conn io.ReadWriter, op ws.OpCode, message *MessageFromWs) error {
 
 	data, err := json.Marshal(message)
 	if err != nil {
-		log.Println(err)
-		return nil
+		log.Println("json.Marshal", err)
+		return err
 	}
 	err = wsutil.WriteServerMessage(conn, op, data)
 	if err != nil {
-		log.Println(err)
+		log.Println("json.Marshal", err)
 		return err
 	}
 

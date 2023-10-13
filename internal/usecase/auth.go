@@ -11,15 +11,15 @@ import (
 )
 
 type AuthUseCase struct {
-	authRepo      AuthRepo
+	userRepo      UserRepo
 	jwtTokenMaker jwt.JwtTokenMaker
 	sessionRepo   SessionRepo
 	otpRepo       redisRepo.OtpRepo
 }
 
-func NewAuthUseCase(r AuthRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
+func NewAuthUseCase(r UserRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
 	return &AuthUseCase{
-		authRepo:      r,
+		userRepo:      r,
 		jwtTokenMaker: j,
 		sessionRepo:   s,
 		otpRepo:       otpRepo,
@@ -33,10 +33,10 @@ func (uc *AuthUseCase) Register(ctx context.Context, c entity.CreateUserRequest)
 		return entity.UserResponse{}, fmt.Errorf("AuthUseCase - Register -  util.HashPassword: %w", err)
 	}
 	c.Password = hashedPassword
-	createdUser, err := uc.authRepo.CreateUser(ctx, c)
+	createdUser, err := uc.userRepo.CreateUser(ctx, c)
 	if err != nil {
 		// internal server error/ bad request
-		return entity.UserResponse{}, fmt.Errorf("AuthUseCase - Register - uc.authRepo.CreateUser: %w", err)
+		return entity.UserResponse{}, fmt.Errorf("AuthUseCase - Register - uc.userRepo.CreateUser: %w", err)
 	}
 
 	return createdUser, nil
@@ -44,10 +44,10 @@ func (uc *AuthUseCase) Register(ctx context.Context, c entity.CreateUserRequest)
 
 // Login: logic login use case
 func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (entity.LoginUserResponse, error) {
-	user, err := uc.authRepo.GetUser(ctx, l.Email)
+	user, err := uc.userRepo.GetUser(ctx, l.Email)
 	if err != nil {
 		// Bad request User with email not found in DB
-		return entity.LoginUserResponse{}, fmt.Errorf("AuthUseCase - Login - uc.authRepo.GetUser: %w", err)
+		return entity.LoginUserResponse{}, fmt.Errorf("AuthUseCase - Login - uc.userRepo.GetUser: %w", err)
 	}
 
 	err = util.CheckPassword(l.Password, user.HashedPassword)
@@ -57,7 +57,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 	}
 
 	accessToken, accessPayload, err := uc.jwtTokenMaker.CreateToken(
-		l.Email,
+		user.Username,
 		7*time.Hour,
 	)
 
@@ -67,7 +67,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 	}
 
 	refreshToken, refreshPayload, err := uc.jwtTokenMaker.CreateToken(
-		l.Email,
+		user.Username,
 		168*time.Hour,
 	)
 	if err != nil {
@@ -127,7 +127,7 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.sessionRepo.GetSession: %w", err)
 	}
 
-	if session.Email != refreshPayload.Email {
+	if session.Email != refreshPayload.Username {
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
 	}
 	if session.RefreshToken != r.RefreshToken {
@@ -139,7 +139,7 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 	}
 
 	accessToken, accessTokenPayload, err := uc.jwtTokenMaker.CreateToken(
-		refreshPayload.Email,
+		refreshPayload.Username,
 		7*time.Hour,
 	)
 	if err != nil {

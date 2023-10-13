@@ -38,9 +38,12 @@ type (
 	}
 
 	// AuthRepo
-	AuthRepo interface {
+	UserRepo interface {
 		CreateUser(context.Context, entity.CreateUserRequest) (entity.UserResponse, error)
 		GetUser(context.Context, string) (entity.GetUser, error)
+		AddFriend(context.Context, string, string) (entity.UserResponse, error)
+		GetUserFriends(context.Context, string) (entity.UserResponse, error)
+		GetUserFriend(context.Context, string, string) error
 	}
 
 	// SessionRepo
@@ -49,22 +52,29 @@ type (
 		GetSession(context.Context, uuid.UUID) (entity.Session, error)
 	}
 
+	// Websocket usecase
 	Websocket interface {
 		WebsocketHandler(http.ResponseWriter, *http.Request, context.Context) error
 	}
 
+	// OtpRepo OtpRepo
 	OtpRepo interface {
 		GetOtp(string, context.Context) (string, error)
 		CreateOtp(context.Context) error
 	}
 
+	// Chat
 	Chat interface {
-		Register(ctx context.Context, conn net.Conn, username string) *websocket.User
+		Register(context.Context, net.Conn, string) *websocket.User
 	}
 
+	// EdenAiApi
 	EdenAiApi interface {
-		GenerateText(text string) string
+		GenerateText(string) string
 	}
 
-
+	Contact interface {
+		AddContact(context.Context, entity.AddFriendRequest) (entity.UserResponse, error)
+		GetContact(context.Context, entity.GetContactRequest) (entity.UserResponse, error)
+	}
 )

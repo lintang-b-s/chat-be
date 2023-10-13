@@ -22,8 +22,8 @@ func NewJWTMaker(secretKey string) (JwtTokenMaker, error) {
 }
 
 // CreateToken membuat jwt token baru berdurasi utk user
-func (maker *JWTMaker) CreateToken(email string, duration time.Duration) (string, *Payload, error) {
-	payload, err := NewPayload(email, duration)
+func (maker *JWTMaker) CreateToken(username string, duration time.Duration) (string, *Payload, error) {
+	payload, err := NewPayload(username, duration)
 	if err != nil {
 		return "", payload, err
 	}

@@ -15,6 +15,11 @@ definitions:
         example: text for translation
         type: string
     type: object
+  v1.addFriendRequest:
+    properties:
+      friend_username:
+        type: string
+    type: object
   v1.createUserRequest:
     properties:
       email:
@@ -45,6 +50,13 @@ definitions:
     - original
     - source
     type: object
+  v1.getContactResponse:
+    properties:
+      contacts:
+        items:
+          $ref: '#/definitions/v1.userResponse'
+        type: array
+    type: object
   v1.historyResponse:
     properties:
       history:
@@ -68,6 +80,8 @@ definitions:
       access_token:
         type: string
       access_token_expires_at:
+        type: string
+      otp:
         type: string
       refresh_token:
         type: string
@@ -256,6 +270,64 @@ paths:
           schema:
             $ref: '#/definitions/v1.response'
       summary: renew Access Token using user refreshToken
+      tags:
+      - user
+  /v1/contact/add:
+    get:
+      consumes:
+      - application/json
+      description: Get User Contact
+      operationId: getContact
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.getContactResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - ApiKeyAuth: []
+      summary: Get  User Contact
+      tags:
+      - user
+    post:
+      consumes:
+      - application/json
+      description: Add Contact
+      operationId: addContact
+      parameters:
+      - description: set up addFriendRequest
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.addFriendRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.userResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - ApiKeyAuth: []
+      summary: Add Contact
       tags:
       - user
 swagger: "2.0"

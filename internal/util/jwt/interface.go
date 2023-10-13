@@ -4,10 +4,8 @@ import "time"
 
 type JwtTokenMaker interface {
 	// CreateToken membuat jwt token baru berdurasi utk user
-	CreateToken(email string, duration time.Duration) (string, *Payload, error)
+	CreateToken(username string, duration time.Duration) (string, *Payload, error)
 
 	// VerifyToken cek jika token valid atau tidak
 	VerifyToken(token string) (*Payload, error)
 }
-
-// JwtToken interface utk membuat jwt token

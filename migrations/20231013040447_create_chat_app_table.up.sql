@@ -62,17 +62,17 @@ ALTER TABLE group_chats ADD CONSTRAINT fk_group_chats_users_from FOREIGN KEY (me
 
 -- Contact Table
 CREATE TABLE contacts (
-                          id uuid PRIMARY KEY NOT NULL ,
-                          contact_one uuid NOT NULL,
-                          contact_two uuid NOT NULL,
+                          user_id uuid NOT NULL,
+                          friend_id uuid NOT NULL,
                           created_at timestamptz NOT NULL DEFAULT (now()),
                           updated_at timestamptz NOT NULL DEFAULT (now()),
-                          deleted_at timestamptz
+                          deleted_at timestamptz,
+                          PRIMARY KEY (user_id, friend_id)
 );
 
-ALTER TABLE contacts ADD CONSTRAINT fk_contacts_users_one FOREIGN KEY (contact_one)
+ALTER TABLE contacts ADD CONSTRAINT fk_contacts_users_one FOREIGN KEY (user_id)
     REFERENCES users (id);
 
-ALTER TABLE contacts ADD CONSTRAINT fk_contacts_users_two FOREIGN KEY (contact_two)
+ALTER TABLE contacts ADD CONSTRAINT fk_contacts_users_two FOREIGN KEY (friend_id)
     REFERENCES users (id);
 

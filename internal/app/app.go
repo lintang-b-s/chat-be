@@ -61,7 +61,7 @@ func Run(cfg *config.Config) {
 	}
 
 	authUseCase := usecase.NewAuthUseCase(
-		repo.NewAuthRepo(gorm.Pool),
+		repo.NewUserRepo(gorm.Pool),
 		jwtTokenMaker,
 		repo.NewSessionRepo(gorm.Pool),
 		*redisRepo.NewOtp(redis),
@@ -75,14 +75,18 @@ func Run(cfg *config.Config) {
 
 	webSocketUseCase := usecase.NewWebsocket(
 		*redisRepo.NewOtp(redis),
-		*websocket.NewChat(redis, *edenAi),
+		*websocket.NewChat(redis, *edenAi, *repo.NewUserRepo(gorm.Pool)),
 		poller,
 		pool,
 	)
 
+	contactUseCase := usecase.NewContactUseCase(
+		repo.NewUserRepo(gorm.Pool),
+	)
+
 	// HTTP Server
 	handler := gin.New()
-	v1.NewRouter(handler, l, authUseCase, webSocketUseCase)
+	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, *contactUseCase, jwtTokenMaker)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
 	// Waiting signal

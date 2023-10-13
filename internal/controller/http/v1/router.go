@@ -2,6 +2,7 @@
 package v1
 
 import (
+	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,7 +23,7 @@ import (
 // @version     1.0
 // @host        localhost:8080
 // @BasePath    /v1
-func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws usecase.Websocket) {
+func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws usecase.Websocket, cont usecase.ContactUseCase, jwt jwt.JwtTokenMaker) {
 	// Options
 	handler.Use(gin.Logger())
 	handler.Use(gin.Recovery())
@@ -42,5 +43,6 @@ func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws useca
 	{
 		newAuthRoutes(h, a, l)
 		NewWebsocketRoutes(h, ws, l)
+		NewContactRoutes(h, &cont, l, jwt)
 	}
 }
