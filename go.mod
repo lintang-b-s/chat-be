@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/Conight/go-googletrans v0.0.0-20200929083318-176776d061cb
-	github.com/Masterminds/squirrel v1.5.2
+	github.com/Masterminds/squirrel v1.5.4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.0
