@@ -20,10 +20,22 @@ func NewUserRedisrepo(rds *redispkg.Redis) *UserRedisRepo {
 }
 
 func (r *UserRedisRepo) UserSetOnline(uuid string) error {
-	key := getKeyUserStatus(uuid)
+	key := r.getKeyUserStatus(uuid)
 	return r.rds.Client.Set(context.Background(), key, time.Now().String(), 30*time.Second).Err()
 }
 
-func getKeyUserStatus(userUUID string) string {
+func (r *UserRedisRepo) getKeyUserStatus(userUUID string) string {
 	return fmt.Sprintf("%s.%s", keyUserStatus, userUUID)
+}
+
+func (r *UserRedisRepo) UserIsOnline(uuid string) bool {
+	key := r.getKeyUserStatus(uuid)
+	err := r.rds.Client.Get(context.Background(), key).Err()
+	if err == nil {
+		// user online karena key ada di di redis
+		return true
+	}
+	// user offline karena key tidak ada di redis (ada error)
+	return false
+
 }

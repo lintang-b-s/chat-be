@@ -68,7 +68,7 @@ type (
 
 	// Chat
 	Chat interface {
-		Register(context.Context, net.Conn, string) *websocketc.User
+		Register(context.Context, net.Conn, string, string) *websocketc.User
 	}
 
 	// EdenAiApi
@@ -90,5 +90,6 @@ type (
 	// UserRedisRepoI
 	UserRedisRepoI interface {
 		UserSetOnline(string) error
+		UserIsOnline(uuid string) bool
 	}
 )

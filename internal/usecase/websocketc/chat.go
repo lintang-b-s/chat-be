@@ -70,6 +70,7 @@ func (u *User) Receive() error {
 	// Jika dalam 30 detik client tidak membalas ping message dg pong meessage, koneksi websocket dg client di close
 	if err := u.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
 		log.Println(err)
+		u.Chat.userOnlineStatusFanout(u.Name, false)
 		u.Conn.Close()
 		return err
 	}
@@ -147,22 +148,30 @@ func (u *User) pongHandler(pongMsg string) error {
 	u.Chat.usrRedis.UserSetOnline(user.Id.String())
 
 	// Fanout User Online Status ke semua kontaknya
-	uFriends, err := u.Chat.userPg.GetUserFriends(context.Background(), u.Name)
-	for _, uFriend := range uFriends.Friends {
+	u.Chat.userOnlineStatusFanout(u.Name, true)
+
+	return u.Conn.SetReadDeadline(time.Now().Add(pongWait))
+}
+
+// userOnlineStatusFanout fanout user online status ke semua kontaknya
+func (c *Chat) userOnlineStatusFanout(username string, online bool) {
+	// Fanout User Online Status ke semua kontaknya
+	userDb, _ := c.userPg.GetUserFriends(context.Background(), username)
+	for _, uFriend := range userDb.Friends {
+		// user yg online (user yang mengirim pong message)
 		msgOnlineStatusFanout := entity.MessageOnlineStatusFanout{
-			FriendId:       uFriend.Id.String(),
-			FriendUsername: uFriends.Username,
-			FriendEmail:    uFriends.Email,
-			Online:         true,
+			FriendId:       userDb.Id.String(),
+			FriendUsername: userDb.Username,
+			FriendEmail:    userDb.Email,
+			Online:         online,
 		}
 		msgWs := &entity.MessageWs{
 			Type:                  entity.MessageTypeOnlineStatusFanOut,
 			MsgOnlineStatusFanout: msgOnlineStatusFanout,
 		}
-		u.Chat.pubSub.PublishToChannel(uFriend.Username, msgWs)
+		// dipublish kesemua teman userDb
+		c.pubSub.PublishToChannel(uFriend.Username, msgWs)
 	}
-
-	return u.Conn.SetReadDeadline(time.Now().Add(pongWait))
 }
 
 // Broadcast sends message to all alive users.
@@ -175,8 +184,42 @@ func (c *Chat) Broadcast(to string, msg *entity.MessageWs) error {
 	return nil
 }
 
+// getAllFriendsOnlineStatus user akan mendapatkan status online/tidaknya semua teman/kontaknya
+func (u *User) getAllFriendsOnlineStatus(ctx context.Context, username string) {
+	userDb, _ := u.Chat.userPg.GetUserFriends(ctx, username)
+	totFriend := len(userDb.Friends)
+	totOnline := 0
+
+	var messageWsFriendsStatus entity.MessageFriendsOnlineStatus
+	var friends []entity.Friend
+	// Set online status setiap kontak/teman  user
+	for _, uFriend := range userDb.Friends {
+		isFriendOnline := u.Chat.usrRedis.UserIsOnline(uFriend.Id.String())
+		if isFriendOnline == true {
+			totOnline += 1
+		}
+
+		friends = append(friends, entity.Friend{
+			FriendId:       uFriend.Id.String(),
+			FriendUsername: uFriend.Username,
+			FriendEmail:    uFriend.Email,
+			Online:         isFriendOnline,
+		})
+	}
+	messageWsFriendsStatus.TotalFriends = totFriend
+	messageWsFriendsStatus.TotalOnline = totOnline
+	messageWsFriendsStatus.Friends = friends
+
+	messageWs := &entity.MessageWs{
+		Type:                   entity.MessageTypeFriendsOnlineStatus,
+		MsgFriendsOnlineStatus: messageWsFriendsStatus,
+	}
+
+	u.Write(websocket.TextMessage, messageWs)
+}
+
 // Register registers new connection as a User.
-func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string) *User {
+func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string, userId string) *User {
 	user := &User{
 		Chat: c,
 		Conn: conn,
@@ -191,7 +234,16 @@ func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username stri
 	}
 	c.mu.Unlock()
 
+	// Set User Online status (key,value) in redis
+	c.usrRedis.UserSetOnline(userId)
+	// fanout user online status ke semua kontaknya
+	c.userOnlineStatusFanout(username, true)
+
+	// Get online status semua kontak yang dimiliki user
+	user.getAllFriendsOnlineStatus(ctx, username)
+
 	// Client subscribe to redis channel (nama channel ya username si user sendiri)
+	// Untuk menerima message dari kontaknya
 	pubSub := c.pubSub.SubscribeToChannel(ctx, username)
 
 	newChannelPubSub := &redispkg.ChannelPubSub{
@@ -242,7 +294,6 @@ func (u *User) subscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubS
 				}
 			}
 		case <-ticker.C:
-
 			log.Println("send ping messages to client " + u.Name + " !!")
 
 			err := u.Conn.WriteMessage(websocket.PingMessage, []byte{})

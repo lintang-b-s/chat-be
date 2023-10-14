@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
+	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"github.com/lintangbs/chat-be/internal/util/gopool"
 	"github.com/mailru/easygo/netpoll"
@@ -19,16 +20,17 @@ var (
 // WebsocketUseCase bussines logic websocketc
 type WebsocketUseCase struct {
 	otpRepo redisRepo.OtpRepo
+	userPg  repo.UserRepo
 	chat    websocketc.Chat
 	poller  netpoll.Poller
 	gopool  *gopool.Pool
 }
 
 // NewWebsocket Create new websocketUseCase
-func NewWebsocket(otp redisRepo.OtpRepo, chat websocketc.Chat, p netpoll.Poller, gp *gopool.Pool) *WebsocketUseCase {
+func NewWebsocket(otp redisRepo.OtpRepo, chat websocketc.Chat, p netpoll.Poller, gp *gopool.Pool,
+	uPg repo.UserRepo) *WebsocketUseCase {
 	return &WebsocketUseCase{
-		otp, chat, p, gp,
-	}
+		otp, uPg, chat, p, gp}
 }
 
 var upgrader = websocket.Upgrader{
@@ -40,18 +42,22 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 
 	otp := r.URL.Query().Get("otp")
 	username := r.URL.Query().Get("username")
-
 	// Grab the OTP in the Get param
 	if otp == "" {
 		// Tell the user its not authorized
 		return WebsocketUnauthorizedError
 	}
-
 	if username == "" {
 		return WebsocketUnauthorizedError
 	}
 
-	err := uc.otpRepo.GetOtp(otp, ctx, username)
+	userDb, err := uc.userPg.GetUserByUsername(username)
+	if err != nil {
+		// Tell the user its not authorized
+		return WebsocketUnauthorizedError
+	}
+
+	err = uc.otpRepo.GetOtp(otp, ctx, username)
 	if err != nil {
 		return WebsocketUnauthorizedError
 	}
@@ -67,7 +73,7 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Register incoming user in chat.
-	user := uc.chat.Register(ctx, conn, username)
+	user := uc.chat.Register(ctx, conn, username, userDb.Id.String())
 
 	// Create netpoll event descriptor for conn.
 	// We want to handle only read events of it.

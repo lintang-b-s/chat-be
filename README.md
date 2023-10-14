@@ -128,6 +128,11 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
 ![online status message fanout](https://res.cloudinary.com/di0pjroxh/image/upload/v1697272778/online-fanout-message_fb6q0e.png)
 
 
+## Kenapa menggunakan redis pubsub untuk menerima chat dari user lain?
+Redis' Pub/Sub exhibits at-most-once message delivery semantics. As the name suggests, it means that a message will be delivered once if at all. Once the message is sent by the Redis server, there's no chance of it being sent again. If the subscriber is unable to handle the message (for example, due to an error or a network disconnect) the message is forever lost.
+<br/><br/>
+Karena jika subscriber offline subscriber, lalu online lagi. user subsriber tidak akan mendapatkan message yg dikrimkan user lain saat dia offline, melainkan hanya mendapatkan
+message dari pubSub  saat dia online dan user lain mengirimkan message. Message yg dikrimkan user lain saat user offline akan difetch dari database postgresql
 
 
 ### ref

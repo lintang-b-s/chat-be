@@ -84,6 +84,7 @@ func Run(cfg *config.Config) {
 		),
 		poller,
 		pool,
+		*repo.NewUserRepo(gorm.Pool),
 	)
 
 	contactUseCase := usecase.NewContactUseCase(
