@@ -10,7 +10,7 @@
 ![one-on-one chat flow 2](https://res.cloudinary.com/dex4u3rw4/image/upload/v1696433562/one-on-one_copy_v2my4l.jpg)
 
 ## Message table for 1 on 1 chat
-![message table for 1 on 1 chat](https://res.cloudinary.com/dex4u3rw4/image/upload/v1696433591/figure-12-9-356WMC2A_o15qjo.webp)
+![message table for 1 on 1 chat](https://res.cloudinary.com/di0pjroxh/image/upload/v1697274479/one-on-one-messageTable_ptublq.png)
 
 
 
@@ -103,6 +103,31 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
 ```
     jalankan request websocket di link postman tsb
 ```
+
+
+## Online Presence
+
+### Login
+![user login mechanism](https://res.cloudinary.com/di0pjroxh/image/upload/v1697273467/user-login_yn8lex.png)
+
+
+
+### Logout
+![user logout mechanism](https://res.cloudinary.com/di0pjroxh/image/upload/v1697273472/user-logout_bxl1e2.png)
+
+
+### Heartbeat
+![heartbeat mechanism](https://res.cloudinary.com/di0pjroxh/image/upload/v1697272518/untitled_2_prfsgc.png)
+
+## Online Status Fanout
+
+### Flow
+![online status fanout](https://res.cloudinary.com/di0pjroxh/image/upload/v1697272521/untitled_2_copy_kn5o8k.png)
+
+### Online status fanout message
+![online status message fanout](https://res.cloudinary.com/di0pjroxh/image/upload/v1697272778/online-fanout-message_fb6q0e.png)
+
+
 
 
 ### ref

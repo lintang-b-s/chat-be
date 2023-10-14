@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"gorm.io/gorm"
+	"log"
 	"time"
 )
 
@@ -138,10 +139,12 @@ func (r *UserRepo) AddFriend(ctx context.Context, myUsername string, fUsername s
 // GetUserFriends mendpatkan kontak yang dimiliki user
 func (r *UserRepo) GetUserFriends(ctx context.Context, username string) (entity.UserResponse, error) {
 	var user User
-	queryRes := r.db.Where(&User{Username: username}).First(&user)
+	queryRes := r.db.Where(&User{Username: username}).Preload("Friends").First(&user)
 	if err := queryRes.Error; err != nil {
 		return entity.UserResponse{}, nil
 	}
+
+	log.Println("friends: ", user.Friends)
 
 	var friendRes []entity.UserResponse
 	for _, uFriend := range user.Friends {
@@ -191,3 +194,22 @@ func (r *UserRepo) GetUserFriend(ctx context.Context, myUsername string, friendU
 //func (r *UserRepo) GetAllUsers(ctx context.Context) ([]entity.UserResponse, error) {
 //
 //}
+
+// GetUser mendapatkan user berdasarkan username di db
+func (r *UserRepo) GetUserByUsername(username string) (entity.GetUser, error) {
+	//TODO implement me
+	var userDb User
+	result := r.db.Where(&User{Username: username}).First(&userDb)
+	if err := result.Error; err != nil {
+		return entity.GetUser{}, err
+	}
+
+	user := entity.GetUser{
+		Id:             userDb.ID,
+		Username:       userDb.Username,
+		Email:          userDb.Email,
+		HashedPassword: userDb.HashedPassword,
+	}
+
+	return user, nil
+}

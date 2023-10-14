@@ -2,9 +2,14 @@ package redisRepo
 
 import (
 	"context"
+	"errors"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"math/rand"
 	"time"
+)
+
+var (
+	OTPNotMatchError = errors.New("User OTP not match with your otp")
 )
 
 type OtpRepo struct {
@@ -16,11 +21,17 @@ func NewOtp(rds *redispkg.Redis) *OtpRepo {
 }
 
 // GetOtp mendapatkan otp dari hash set yang ada di redis lalu menghapus otp tersebut dari hash set redis
-func (r *OtpRepo) GetOtp(otp string, ctx context.Context) error {
-	err := r.rds.Client.HGet(ctx, "otp", otp).Err()
+func (r *OtpRepo) GetOtp(otp string, ctx context.Context, username string) error {
+	res := r.rds.Client.HGet(ctx, "otp", otp)
+	err := res.Err()
 	if err != nil {
 		return err
 	}
+
+	if res.Val() != username {
+		return OTPNotMatchError
+	}
+
 	err = r.rds.Client.HDel(ctx, "otp", otp).Err()
 	if err != nil {
 		return err
@@ -32,11 +43,11 @@ func (r *OtpRepo) GetOtp(otp string, ctx context.Context) error {
 var charset = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 // CreatOtp menyimpan otp string ke hash set di dalam redis
-func (r *OtpRepo) CreateOtp(ctx context.Context) (string, error) {
+func (r *OtpRepo) CreateOtp(ctx context.Context, username string) (string, error) {
 	rand.Seed(time.Now().UnixNano())
 	otp := randStr(6)
 
-	err := r.rds.Client.HSet(ctx, "otp", otp, true).Err()
+	err := r.rds.Client.HSet(ctx, "otp", otp, username).Err()
 	if err != nil {
 		return "", err
 	}

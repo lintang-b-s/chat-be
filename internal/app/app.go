@@ -62,7 +62,7 @@ func Run(cfg *config.Config) {
 	}
 
 	authUseCase := usecase.NewAuthUseCase(
-		repo.NewUserRepo(gorm.Pool),
+		*repo.NewUserRepo(gorm.Pool),
 		jwtTokenMaker,
 		repo.NewSessionRepo(gorm.Pool),
 		*redisRepo.NewOtp(redis),
@@ -76,13 +76,18 @@ func Run(cfg *config.Config) {
 
 	webSocketUseCase := usecase.NewWebsocket(
 		*redisRepo.NewOtp(redis),
-		*websocketc.NewChat(redis, *edenAi, *repo.NewUserRepo(gorm.Pool)),
+		*websocketc.NewChat(*redisRepo.NewPubSubRedis(redis),
+			*edenAi,
+			*repo.NewUserRepo(gorm.Pool),
+			*redis,
+			*redisRepo.NewUserRedisrepo(redis),
+		),
 		poller,
 		pool,
 	)
 
 	contactUseCase := usecase.NewContactUseCase(
-		repo.NewUserRepo(gorm.Pool),
+		*repo.NewUserRepo(gorm.Pool),
 	)
 
 	// HTTP Server

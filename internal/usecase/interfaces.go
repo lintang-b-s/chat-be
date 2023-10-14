@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
+	"github.com/redis/go-redis/v9"
 	"net"
 	"net/http"
 )
@@ -38,13 +39,14 @@ type (
 	}
 
 	// AuthRepo
-	UserRepo interface {
+	UserRepoI interface {
 		CreateUser(context.Context, entity.CreateUserRequest) (entity.UserResponse, error)
 		GetUser(context.Context, string) (entity.GetUser, error)
 		AddFriend(context.Context, string, string) (entity.UserResponse, error)
 		GetUserFriends(context.Context, string) (entity.UserResponse, error)
 		GetUserFriend(context.Context, string, string) error
 		//GetAllUsers(context.Context) ([]entity.UserResponse, error)
+		GetUserByUsername(string) (entity.GetUser, error)
 	}
 
 	// SessionRepo
@@ -59,9 +61,9 @@ type (
 	}
 
 	// OtpRepo OtpRepo
-	OtpRepo interface {
-		GetOtp(string, context.Context) (string, error)
-		CreateOtp(context.Context) error
+	OtpRepoI interface {
+		GetOtp(string, context.Context, string) (string, error)
+		CreateOtp(context.Context, string) error
 	}
 
 	// Chat
@@ -77,5 +79,16 @@ type (
 	Contact interface {
 		AddContact(context.Context, entity.AddFriendRequest) (entity.UserResponse, error)
 		GetContact(context.Context, entity.GetContactRequest) (entity.UserResponse, error)
+	}
+
+	//	PubSubRedis
+	PubSubRedisI interface {
+		SubscribeToChannel(context.Context, string) *redis.PubSub
+		PublishToChannel(string, *entity.MessageWs) error
+	}
+
+	// UserRedisRepoI
+	UserRedisRepoI interface {
+		UserSetOnline(string) error
 	}
 )

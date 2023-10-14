@@ -51,7 +51,7 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 		return WebsocketUnauthorizedError
 	}
 
-	err := uc.otpRepo.GetOtp(otp, ctx)
+	err := uc.otpRepo.GetOtp(otp, ctx, username)
 	if err != nil {
 		return WebsocketUnauthorizedError
 	}
@@ -81,7 +81,6 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 			// itself. So we want to stop receive events about such conn
 			// and remove it from the chat registry.
 			uc.poller.Stop(desc)
-			//h.chat.Remove(user)
 			return
 		}
 		// Here we can read some new message from connection.
@@ -94,7 +93,6 @@ func (uc *WebsocketUseCase) WebsocketHandler(w http.ResponseWriter, r *http.Requ
 				// When receive failed, we can only disconnect broken
 				// connection and stop to receive events about it.
 				uc.poller.Stop(desc)
-				//h.chat.Remove(user)
 			}
 		})
 	})

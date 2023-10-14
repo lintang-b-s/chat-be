@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
+	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/util"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"time"
 )
 
 type AuthUseCase struct {
-	userRepo      UserRepo
+	userRepo      repo.UserRepo
 	jwtTokenMaker jwt.JwtTokenMaker
 	sessionRepo   SessionRepo
 	otpRepo       redisRepo.OtpRepo
 }
 
-func NewAuthUseCase(r UserRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
+func NewAuthUseCase(r repo.UserRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo:      r,
 		jwtTokenMaker: j,
@@ -92,7 +93,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 	}
 
 	//Create Otp for Websocket
-	otp, err := uc.otpRepo.CreateOtp(ctx)
+	otp, err := uc.otpRepo.CreateOtp(ctx, user.Username)
 	if err != nil {
 		return entity.LoginUserResponse{}, fmt.Errorf("AuthUseCase - Login - uc.otpRepo.CreateOtp: %w", err)
 	}
