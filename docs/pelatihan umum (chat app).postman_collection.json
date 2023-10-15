@@ -77,7 +77,12 @@
 								"exec": [
 									"var jsonData = pm.response.json();",
 									"var access_token = jsonData.access_token;",
-									"pm.globals.set(\"acToken_lintang\", access_token);"
+									"var refresh_token = jsonData.refresh_token;",
+									"var otp_lintang = jsonData.otp;",
+									"pm.globals.set(\"acToken_lintang\", access_token);",
+									"",
+									"pm.globals.set(\"refToken_lintang\",refresh_token );",
+									"pm.globals.set(\"otp_lintang\", otp_lintang);"
 								],
 								"type": "text/javascript"
 							}
@@ -119,8 +124,11 @@
 								"exec": [
 									"var jsonData = pm.response.json();",
 									"var access_token = jsonData.access_token;",
-									"pm.globals.set(\"acToken_lintan2\", access_token);",
-									""
+									"var otp_lintang2 = jsonData.otp;",
+									"var refresh_token = jsonData.refresh_token;",
+									"pm.globals.set(\"acToken_lintang2\", access_token);",
+									"pm.globals.set(\"refToken_lintang2\",refresh_token );",
+									"pm.globals.set(\"otp_lintang2\", otp_lintang2);"
 								],
 								"type": "text/javascript"
 							}
@@ -177,6 +185,80 @@
 								"v1",
 								"auth",
 								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "logout",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "accessTokenUrl",
+									"value": "http://keycloak:8080/realms/spring-boot-microservices-realm/protocol/openid-connect/token",
+									"type": "string"
+								},
+								{
+									"key": "clientSecret",
+									"value": "OlLIrucXOXgDap2kcGPiCvJzXgekWWuw",
+									"type": "string"
+								},
+								{
+									"key": "scope",
+									"value": "openid offline_access",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "spring-cloud-client",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "authUrl",
+									"value": "http://localhost:5005/auth/login",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "token",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh_token\": \"{{refToken_lintang}}\"\n}\n\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/v1/auth/logout",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"auth",
+								"logout"
 							]
 						}
 					},

@@ -3,7 +3,7 @@ package redisRepo
 import (
 	"context"
 	"fmt"
-	"github.com/lintangbs/chat-be/internal/app"
+	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"time"
 )
@@ -50,7 +50,7 @@ func (r *UserRedisRepo) constructKey(key string, userId string) string {
 // SetUserServerLocation Set user chat-server location in redis
 func (r *UserRedisRepo) SetUserServerLocation(userId string) error {
 	key := r.constructKey(keyUserServerLocation, userId)
-	return r.rds.Client.HSet(context.Background(), key, app.ServerName).Err()
+	return r.rds.Client.HSet(context.Background(), key, userId, entity.ServerName).Err()
 }
 
 // GetUserServerLocation  get user chat-server location in redis

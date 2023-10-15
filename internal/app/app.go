@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gin-contrib/cors"
-	"github.com/google/uuid"
+	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
@@ -34,8 +34,6 @@ var (
 	workers   = flag.Int("workers", 128, "max workers count")
 	queue     = flag.Int("queue", 1, "workers task queue size")
 	ioTimeout = flag.Duration("io_timeout", time.Millisecond*100, "i/o operations timeout")
-
-	ServerName = "chat-server" + uuid.New().String()
 )
 
 // Run creates objects via constructors.
@@ -85,10 +83,12 @@ func Run(cfg *config.Config) {
 		*redisRepo.NewUserRedisrepo(redis),
 	)
 
+	go chat.Run()
+
 	// start subscriber channel chat-server-serverName
 	// Client subscribe to redis channel (nama channel ya username si user sendiri)
 	// Untuk menerima message dari kontaknya
-	pubSub := chat.PubSub.SubscribeToChannel(context.Background(), ServerName)
+	pubSub := chat.PubSub.SubscribeToChannel(context.Background(), entity.ServerName)
 
 	newChannelPubSub := &redispkg.ChannelPubSub{
 		CloseChan:  make(chan struct{}, 1),
@@ -98,8 +98,8 @@ func Run(cfg *config.Config) {
 
 	chat.Rds.ChannelsPubSubSync.Lock()
 
-	if _, ok := chat.Rds.ChannelsPubSub[ServerName]; !ok {
-		chat.Rds.ChannelsPubSub[ServerName] = newChannelPubSub
+	if _, ok := chat.Rds.ChannelsPubSub[entity.ServerName]; !ok {
+		chat.Rds.ChannelsPubSub[entity.ServerName] = newChannelPubSub
 	}
 	chat.Rds.ChannelsPubSubSync.Unlock()
 	go chat.SubscribePubSubAndSendToClient(newChannelPubSub)

@@ -3,10 +3,8 @@ package websocketc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/lintangbs/chat-be/internal/app"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"sort"
@@ -47,6 +45,9 @@ type Chat struct {
 	us        []*User
 	broadcast chan *entity.MessageWs
 
+	// Register requests from the clients.
+	register chan *User
+
 	// Unregister requests from clients.
 	unregister chan *User
 }
@@ -66,12 +67,20 @@ func NewChat(pubSub redisRepo.PubSubRedis,
 		usrRedis:   ud,
 		broadcast:  make(chan *entity.MessageWs),
 		unregister: make(chan *User),
+		register:   make(chan *User),
 	}
 }
 
 func (c *Chat) Run() {
 	for {
 		select {
+		case user := <-c.register:
+			user.Id = c.seq
+			user.Name = user.Name
+
+			c.us = append(c.us, user)
+			c.seq++
+
 		case user := <-c.unregister:
 			c.mu.Lock()
 			// binary search utk cari index user di array us
@@ -80,7 +89,7 @@ func (c *Chat) Run() {
 			})
 
 			// hapus client dari array chat.us
-			without := make([]*User, len(c.us)-1)
+			without := make([]*User, len(c.us)-1) // us = nil
 			copy(without[:i], c.us[:i])
 			copy(without[i:], c.us[i+1:])
 			c.us = without
@@ -96,13 +105,15 @@ func (c *Chat) Run() {
 
 func (c *Chat) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 	for _, user := range c.us {
+
 		// mengirim ke user dg username sama dg recipient username di messageWs
 		recipientUsername := message.PrivateChat.RecipientUsername
-		if user.Name == recipientUsername {
+		rcpFanoutUsername := message.MsgOnlineStatusFanout.FriendUsername
+		if user.Name == recipientUsername || user.Name == rcpFanoutUsername {
+
 			select {
 			case user.inbox <- message:
-			default:
-				close(user.inbox)
+
 			}
 		}
 	}
@@ -120,6 +131,10 @@ var (
 // It blocks until full message received.
 func (u *User) Receive() error {
 
+	defer func() {
+		u.Chat.unregister <- u
+		u.Conn.Close()
+	}()
 	// Set Max Size of Messages in Bytes
 	u.Conn.SetReadLimit(1024)
 
@@ -128,6 +143,7 @@ func (u *User) Receive() error {
 	// Jika dalam 30 detik client tidak membalas ping message dg pong meessage, koneksi websocket dg client di close
 	if err := u.Conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
 		log.Println(err)
+		u.Chat.unregister <- u
 		u.Chat.userOnlineStatusFanout(u.Name, false)
 		u.Conn.Close()
 		return err
@@ -135,64 +151,67 @@ func (u *User) Receive() error {
 
 	u.Conn.SetPongHandler(u.pongHandler)
 
-	// ReadMessage dari client websocket
-	_, msg, err := u.Conn.ReadMessage()
+	for {
 
-	if err != nil {
-		u.Conn.Close()
-		return err
-	}
+		// ReadMessage dari client websocket
+		_, msg, err := u.Conn.ReadMessage()
 
-	msgWs := &entity.MessageWs{}
-	if err = json.Unmarshal(msg, msgWs); err != nil {
-		log.Println("json.Unmarshal: ", err)
-		return err
-	}
-
-	switch msgWs.Type {
-	case entity.MessageTypePrivateChatBot:
-		resText := u.Chat.edenAiApi.GenerateText(msgWs.PrivateChat.Message)
-		msgWs.PrivateChat.MessageId = uuid.New().String()
-		msgWs.PrivateChat.CreatedAt = time.Now()
-		msgWs.PrivateChat.Message = resText
-		err = u.Write(websocket.TextMessage, msgWs)
 		if err != nil {
-			log.Println("Write: ", err)
 			return err
 		}
-	case entity.MessageTypePrivateChat:
-		// private chat dg user lain yang sudah ditambahkan kontaknya
-		msgWs.PrivateChat.MessageId = uuid.New().String()
-		msgWs.PrivateChat.CreatedAt = time.Now()
-		friendUsername := msgWs.PrivateChat.RecipientUsername
-		isFriendErr := u.Chat.userPg.GetUserFriend(
-			context.Background(),
-			msgWs.PrivateChat.SenderUsername,
-			friendUsername,
-		)
-		if isFriendErr != nil {
-			fmt.Println("u.Chat.pg.GetUserFriend: ", isFriendErr)
 
-			msgWs.PrivateChat.Message = msgWs.PrivateChat.RecipientUsername + " is not your friend"
+		msgWs := &entity.MessageWs{}
+		if err = json.Unmarshal(msg, msgWs); err != nil {
+			log.Println("json.Unmarshal: ", err)
+			//continue
+			return err
+		}
+
+		switch msgWs.Type {
+		case entity.MessageTypePrivateChatBot:
+			resText := u.Chat.edenAiApi.GenerateText(msgWs.PrivateChat.Message)
+			msgWs.PrivateChat.MessageId = uuid.New().String()
+			msgWs.PrivateChat.CreatedAt = time.Now()
+			msgWs.PrivateChat.Message = resText
 			err = u.Write(websocket.TextMessage, msgWs)
 			if err != nil {
 				log.Println("Write: ", err)
-				return err
+				continue
 			}
-			return err
+		case entity.MessageTypePrivateChat:
+			// private chat dg user lain yang sudah ditambahkan kontaknya
+			msgWs.PrivateChat.MessageId = uuid.New().String()
+			msgWs.PrivateChat.CreatedAt = time.Now()
+			friendUsername := msgWs.PrivateChat.RecipientUsername
+			isFriendErr := u.Chat.userPg.GetUserFriend(
+				context.Background(),
+				msgWs.PrivateChat.SenderUsername,
+				friendUsername,
+			)
+			if isFriendErr != nil {
+				log.Println("u.Chat.pg.GetUserFriend: ", isFriendErr)
 
+				msgWs.PrivateChat.Message = msgWs.PrivateChat.RecipientUsername + " is not your friend"
+				err = u.Write(websocket.TextMessage, msgWs)
+				if err != nil {
+					log.Println("Write: ", err)
+					continue
+				}
+				continue
+
+			}
+			friend, _ := u.Chat.userPg.GetUserByUsername(friendUsername)
+
+			isFriendInSameServer, friendServerLocation := u.Chat.isFriendInSameServer(friend.Id.String())
+			if isFriendInSameServer == true {
+				// Jika friend/recipient message berada di chat-server yg sama dg chat-server user
+				u.Chat.broadcast <- msgWs
+				continue
+			}
+
+			// jika teman user berada di server yg berbeda dg server user sender
+			u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
 		}
-		friend, _ := u.Chat.userPg.GetUserByUsername(friendUsername)
-
-		isFriendInSameServer, friendServerLocation := u.Chat.isFriendInSameServer(friend.Id.String())
-		if isFriendInSameServer == true {
-			// Jika friend/recipient message berada di chat-server yg sama dg chat-server user
-			u.Chat.broadcast <- msgWs
-			return nil
-		}
-
-		// jika teman user berada di server yg berbeda dg server user sender
-		u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
 	}
 
 	return nil
@@ -223,7 +242,7 @@ func (u *User) pongHandler(pongMsg string) error {
 func (c *Chat) isFriendInSameServer(friendId string) (bool, string) {
 	friendServerLocation, _ := c.usrRedis.GetUserServerLocation(friendId)
 	isFriendOnline := c.usrRedis.UserIsOnline(friendId)
-	if isFriendOnline == true && friendServerLocation == app.ServerName {
+	if isFriendOnline == true && friendServerLocation == entity.ServerName {
 		// Jika teman user berada di server yg sama dg server user sender
 		return true, friendServerLocation
 	}
@@ -295,25 +314,20 @@ func (u *User) getAllFriendsOnlineStatus(ctx context.Context, username string) {
 // Register registers new connection as a User.
 func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string, userId string) *User {
 	user := &User{
-		Chat: c,
-		Conn: conn,
+		Chat:  c,
+		Conn:  conn,
+		inbox: make(chan *entity.MessageWs),
+		Name:  username,
 	}
 
-	c.mu.Lock()
-	{
-		user.Id = c.seq
-		user.Name = username
-
-		c.us = append(c.us, user)
-		c.seq++
-	}
-	c.mu.Unlock()
+	user.Chat.register <- user
 
 	// Register user chat-server location in redis
 	c.usrRedis.SetUserServerLocation(userId)
 
 	// Set User Online status (key,value) in redis
 	c.usrRedis.UserSetOnline(userId)
+
 	// fanout user online status ke semua kontaknya
 	c.userOnlineStatusFanout(username, true)
 
@@ -376,29 +390,13 @@ func (u *User) writePump() {
 	ticker := time.NewTicker(pingInterval)
 
 	defer func() {
-		u.Chat.unregister <- u
 		ticker.Stop()
 		u.Conn.Close()
 	}()
 	for {
 
 		select {
-		//case data := <-channelRedis.Channel():
-		//	msg := &entity.MessageWs{}
-		//	dec := json.NewDecoder(strings.NewReader(data.Payload))
-		//
-		//	err := dec.Decode(msg)
-		//
-		//	if err != nil {
-		//		log.Println("dec.Decode", err)
-		//		return
-		//	} else {
-		//		err = u.Write(websocket.TextMessage, msg)
-		//		if err != nil {
-		//			log.Println(err)
-		//			return
-		//		}
-		//	}
+
 		case <-ticker.C:
 			log.Println("send ping messages to client " + u.Name + " !!")
 
