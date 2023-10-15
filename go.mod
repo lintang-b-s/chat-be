@@ -13,7 +13,6 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/ilyakaznacheev/cleanenv v1.2.6
 	github.com/jackc/pgx/v4 v4.14.1
-	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
 	github.com/prometheus/client_golang v1.11.0
 	github.com/redis/go-redis/v9 v9.2.1
 	github.com/rs/zerolog v1.26.1

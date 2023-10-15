@@ -5,7 +5,6 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
-	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"github.com/redis/go-redis/v9"
 	"net"
@@ -37,10 +36,11 @@ type (
 		Register(context.Context, entity.CreateUserRequest) (entity.UserResponse, error)
 		Login(context.Context, entity.LoginUserRequest) (entity.LoginUserResponse, error)
 		RenewAccessToken(context.Context, entity.RenewAccessTokenRequest) (entity.RenewAccessTokenResponse, error)
+		DeleteRefreshToken(context.Context, entity.DeleteRefreshTokenRequest) error
 	}
 
 	// AuthRepo
-	UserRepoI interface {
+	UserRepo interface {
 		CreateUser(context.Context, entity.CreateUserRequest) (entity.UserResponse, error)
 		GetUser(context.Context, string) (entity.GetUser, error)
 		AddFriend(context.Context, string, string) (entity.UserResponse, error)
@@ -54,6 +54,7 @@ type (
 	SessionRepo interface {
 		CreateSession(context.Context, entity.CreateSessionRequest) (entity.Session, error)
 		GetSession(context.Context, uuid.UUID) (entity.Session, error)
+		DeleteSession(context.Context, uuid.UUID) error
 	}
 
 	// Websocket usecase
@@ -62,14 +63,14 @@ type (
 	}
 
 	// OtpRepo OtpRepo
-	OtpRepoI interface {
-		GetOtp(string, context.Context, string) (string, error)
-		CreateOtp(context.Context, string) error
+	OtpRepo interface {
+		GetOtp(string, context.Context, string) error
+		CreateOtp(context.Context, string) (string, error)
 	}
 
 	// Chat
-	Chat interface {
-		Register(context.Context, net.Conn, string, string) *websocketc.User
+	ChatUse interface {
+		Register(context.Context, net.Conn, string, string) *User
 		SubscribePubSubAndSendToClient(*redispkg.ChannelPubSub)
 	}
 
@@ -84,13 +85,13 @@ type (
 	}
 
 	//	PubSubRedis
-	PubSubRedisI interface {
+	PubSubRedis interface {
 		SubscribeToChannel(context.Context, string) *redis.PubSub
 		PublishToChannel(string, *entity.MessageWs) error
 	}
 
-	// UserRedisRepoI
-	UserRedisRepoI interface {
+	// UserRedisRepo
+	UserRedisRepo interface {
 		UserSetOnline(string) error
 		UserIsOnline(string) bool
 		SetUserServerLocation(string) error

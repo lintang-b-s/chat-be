@@ -16,7 +16,7 @@ type SessionRepo struct {
 type Session struct {
 	gorm.Model
 	ID           uuid.UUID
-	Email        string
+	Username     string
 	RefreshToken string
 	CreatedAt    time.Time
 	ExpiresAt    time.Time
@@ -26,11 +26,12 @@ func NewSessionRepo(db *gorm.DB) *SessionRepo {
 	return &SessionRepo{db}
 }
 
+// CreateSession insert session /refrsh token baru ke database
 func (r *SessionRepo) CreateSession(ctx context.Context, c entity.CreateSessionRequest) (entity.Session, error) {
 
 	createSession := Session{
 		ID:           c.ID,
-		Email:        c.Email,
+		Username:     c.Username,
 		RefreshToken: c.RefreshToken,
 		ExpiresAt:    c.ExpiresAt,
 	}
@@ -40,13 +41,14 @@ func (r *SessionRepo) CreateSession(ctx context.Context, c entity.CreateSessionR
 	}
 	session := entity.Session{
 		ID:           createSession.ID,
-		Email:        createSession.Email,
+		Username:     createSession.Username,
 		RefreshToken: createSession.RefreshToken,
 		ExpiresAt:    createSession.ExpiresAt,
 	}
 	return session, nil
 }
 
+// GetSession mendapatkan sesssion/refresh token dari database
 func (r *SessionRepo) GetSession(ctx context.Context, refreshTokkenId uuid.UUID) (entity.Session, error) {
 	var sessionDb Session
 
@@ -58,11 +60,20 @@ func (r *SessionRepo) GetSession(ctx context.Context, refreshTokkenId uuid.UUID)
 
 	session := entity.Session{
 		ID:           sessionDb.ID,
-		Email:        sessionDb.Email,
+		Username:     sessionDb.Username,
 		RefreshToken: sessionDb.RefreshToken,
 		ExpiresAt:    sessionDb.ExpiresAt,
 		CreatedAt:    sessionDb.CreatedAt,
 	}
 
 	return session, nil
+}
+
+func (r *SessionRepo) DeleteSession(ctx context.Context, uuid uuid.UUID) error {
+	var sessionDb Session
+	result := r.db.Where(&Session{ID: uuid}).Delete(&sessionDb)
+	if err := result.Error; err != nil {
+		return err
+	}
+	return nil
 }

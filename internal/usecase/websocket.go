@@ -4,11 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/gorilla/websocket"
-	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
-	"github.com/lintangbs/chat-be/internal/usecase/repo"
-	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
-	"github.com/lintangbs/chat-be/internal/util/gopool"
-	"github.com/mailru/easygo/netpoll"
 	"net/http"
 )
 
@@ -19,18 +14,16 @@ var (
 
 // WebsocketUseCase bussines logic websocketc
 type WebsocketUseCase struct {
-	otpRepo redisRepo.OtpRepo
-	userPg  repo.UserRepo
-	chat    *websocketc.Chat
-	poller  netpoll.Poller
-	gopool  *gopool.Pool
+	otpRepo OtpRepo
+	userPg  UserRepo
+	chat    *Chat
 }
 
 // NewWebsocket Create new websocketUseCase
-func NewWebsocket(otp redisRepo.OtpRepo, chat *websocketc.Chat, p netpoll.Poller, gp *gopool.Pool,
-	uPg repo.UserRepo) *WebsocketUseCase {
+func NewWebsocket(otp OtpRepo, chat *Chat,
+	uPg UserRepo) *WebsocketUseCase {
 	return &WebsocketUseCase{
-		otp, uPg, chat, p, gp}
+		otp, uPg, chat}
 }
 
 var upgrader = websocket.Upgrader{

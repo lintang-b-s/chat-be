@@ -3,24 +3,18 @@ package app
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	uuid2 "github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
-	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
-	"github.com/lintangbs/chat-be/internal/util/gopool"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
-	"github.com/mailru/easygo/netpoll"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/lintangbs/chat-be/config"
 	v1 "github.com/lintangbs/chat-be/internal/controller/http/v1"
@@ -29,12 +23,6 @@ import (
 	"github.com/lintangbs/chat-be/pkg/gorm"
 	"github.com/lintangbs/chat-be/pkg/httpserver"
 	"github.com/lintangbs/chat-be/pkg/logger"
-)
-
-var (
-	workers   = flag.Int("workers", 128, "max workers count")
-	queue     = flag.Int("queue", 1, "workers task queue size")
-	ioTimeout = flag.Duration("io_timeout", time.Millisecond*100, "i/o operations timeout")
 )
 
 // Run creates objects via constructors.
@@ -59,36 +47,24 @@ func Run(cfg *config.Config) {
 		l.Fatal(fmt.Errorf("app - Run - jwtTokenMaker - jwt.NewJWTMaker: %w", err))
 	}
 
-	poller, err := netpoll.New(nil)
-	if err != nil {
-		l.Fatal(fmt.Errorf("app - Run - netpoll.New - netpoll.New: %w", err))
-	}
-
 	authUseCase := usecase.NewAuthUseCase(
-		*repo.NewUserRepo(gorm.Pool),
+		repo.NewUserRepo(gorm.Pool),
 		jwtTokenMaker,
 		repo.NewSessionRepo(gorm.Pool),
-		*redisRepo.NewOtp(redis),
+		redisRepo.NewOtp(redis),
+		redisRepo.NewPubSubRedis(redis),
+		redisRepo.NewUserRedisrepo(redis),
 	)
 
-	var (
-		// Make pool of X size, Y sized work queue and one pre-spawned
-		// goroutine.
-		pool = gopool.NewPool(*workers, *queue, 1)
-	)
-
-	chat := websocketc.NewChat(*redisRepo.NewPubSubRedis(redis),
-		*edenAi,
-		*repo.NewUserRepo(gorm.Pool),
-		*redis,
-		*redisRepo.NewUserRedisrepo(redis),
+	chat := usecase.NewChat(redisRepo.NewPubSubRedis(redis),
+		edenAi,
+		repo.NewUserRepo(gorm.Pool),
+		redis,
+		redisRepo.NewUserRedisrepo(redis),
 	)
 
 	go chat.Run()
 
-	// start subscriber channel chat-server-serverName
-	// Client subscribe to redis channel (nama channel ya username si user sendiri)
-	// Untuk menerima message dari kontaknya
 	entity.ChatServerNameGlobal = &entity.ServerName{
 		ChatServerName: "chat-server" + uuid2.New().String(),
 	}
@@ -96,15 +72,13 @@ func Run(cfg *config.Config) {
 	fmt.Println("chat-server: ", entity.ChatServerNameGlobal)
 
 	webSocketUseCase := usecase.NewWebsocket(
-		*redisRepo.NewOtp(redis),
+		redisRepo.NewOtp(redis),
 		chat,
-		poller,
-		pool,
-		*repo.NewUserRepo(gorm.Pool),
+		repo.NewUserRepo(gorm.Pool),
 	)
 
 	contactUseCase := usecase.NewContactUseCase(
-		*repo.NewUserRepo(gorm.Pool),
+		repo.NewUserRepo(gorm.Pool),
 	)
 
 	// HTTP Server
@@ -115,6 +89,9 @@ func Run(cfg *config.Config) {
 	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, *contactUseCase, jwtTokenMaker)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
+	// start subscriber channel chat-server-serverName
+	// Client subscribe to redis channel (nama channel ya username si user sendiri)
+	// Untuk menerima message dari kontaknya
 	pubSub := chat.PubSub.SubscribeToChannel(context.Background(), entity.ChatServerNameGlobal.ChatServerName)
 
 	newChannelPubSub := &redispkg.ChannelPubSub{

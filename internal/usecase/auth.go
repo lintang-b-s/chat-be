@@ -4,26 +4,30 @@ import (
 	"context"
 	"fmt"
 	"github.com/lintangbs/chat-be/internal/entity"
-	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
-	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/util"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"time"
 )
 
 type AuthUseCase struct {
-	userRepo      repo.UserRepo
+	userRepo      UserRepo
 	jwtTokenMaker jwt.JwtTokenMaker
 	sessionRepo   SessionRepo
-	otpRepo       redisRepo.OtpRepo
+	otpRepo       OtpRepo
+	pubSubRds     PubSubRedis
+	userRdsRepo   UserRedisRepo
 }
 
-func NewAuthUseCase(r repo.UserRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
+func NewAuthUseCase(r UserRepo, j jwt.JwtTokenMaker, s SessionRepo,
+	otpRepo OtpRepo,
+	redis PubSubRedis, userRdsRepo UserRedisRepo) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo:      r,
 		jwtTokenMaker: j,
 		sessionRepo:   s,
 		otpRepo:       otpRepo,
+		pubSubRds:     redis,
+		userRdsRepo:   userRdsRepo,
 	}
 }
 
@@ -78,7 +82,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 
 	createSessionReq := entity.CreateSessionRequest{
 		ID:           refreshPayload.ID,
-		Email:        l.Email,
+		Username:     user.Username,
 		RefreshToken: refreshToken,
 		ExpiresAt:    refreshPayload.ExpiredAt,
 	}
@@ -128,7 +132,7 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.sessionRepo.GetSession: %w", err)
 	}
 
-	if session.Email != refreshPayload.Username {
+	if session.Username != refreshPayload.Username {
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
 	}
 	if session.RefreshToken != r.RefreshToken {
@@ -152,4 +156,64 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 		AccessTokenExpiresAt: accessTokenPayload.ExpiredAt,
 	}
 	return res, nil
+}
+
+func (uc *AuthUseCase) DeleteRefreshToken(ctx context.Context, d entity.DeleteRefreshTokenRequest) error {
+
+	refreshPayload, err := uc.jwtTokenMaker.VerifyToken(d.RefreshToken)
+	if err != nil {
+		// Unauthorized , token yg dikrim tidak sama dg yg ada di database
+		return fmt.Errorf("AuthUseCase - DeleteRefreshToken - uc.jwtTokenMaker.VerifyToken: %w", err)
+	}
+
+	session, err := uc.sessionRepo.GetSession(ctx, refreshPayload.ID)
+	if err != nil {
+		return fmt.Errorf("AuthUseCase - DeleteRefreshToken - uc.sessionRepo.GetSession: %w", err)
+	}
+	if session.Username != refreshPayload.Username {
+		return fmt.Errorf("Invalid session")
+	}
+	if session.RefreshToken != d.RefreshToken {
+		return fmt.Errorf("Invalid session")
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		return fmt.Errorf("Invalid session")
+	}
+	err = uc.sessionRepo.DeleteSession(ctx, refreshPayload.ID)
+	if err != nil {
+		return fmt.Errorf("AuthUseCase - DeleteRefreshToken - uc.sessionRepo.DeleteSession: %w", err)
+	}
+
+	user, err := uc.userRepo.GetUserFriends(ctx, refreshPayload.Username)
+	if err != nil {
+		return fmt.Errorf("AuthUseCase - DeleteRefreshToken - uc.userRepo.GetUserFriends: %w", err)
+	}
+	for _, uFriend := range user.Friends {
+		msgOnStatusFanout := entity.MessageOnlineStatusFanout{
+			FriendId:          user.Id.String(),
+			FriendUsername:    user.Username,
+			FriendEmail:       user.Email,
+			Online:            false,
+			UserToGetNotified: uFriend.Username,
+		}
+		msgWs := &entity.MessageWs{
+			Type:                  entity.MessageTypeOnlineStatusFanOut,
+			MsgOnlineStatusFanout: msgOnStatusFanout,
+		}
+		isFriendOnline := uc.userRdsRepo.UserIsOnline(uFriend.Username)
+		friendChatServerLocation, _ := uc.userRdsRepo.GetUserServerLocation(uFriend.Id.String())
+		if friendChatServerLocation == entity.ChatServerNameGlobal.ChatServerName && isFriendOnline == true {
+			// Jika teman user berada di server yg sama dg server user sender
+			// publish ke channel chat-server sendiri
+			fmt.Println("server sama", friendChatServerLocation, "  ", entity.ChatServerNameGlobal.ChatServerName)
+			uc.pubSubRds.PublishToChannel(entity.ChatServerNameGlobal.ChatServerName, msgWs)
+			continue
+		}
+		// publish ke channel ke chat-server teman
+		fmt.Println("server beda", friendChatServerLocation, "  ", entity.ChatServerNameGlobal.ChatServerName)
+		uc.pubSubRds.PublishToChannel(friendChatServerLocation, msgWs)
+		continue
+	}
+	return nil
 }

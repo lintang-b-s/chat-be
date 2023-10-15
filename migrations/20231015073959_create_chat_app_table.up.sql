@@ -13,7 +13,7 @@ CREATE TABLE users (
 
 CREATE TABLE sessions (
                           id uuid PRIMARY KEY NOT NULL,
-                          email varchar NOT NULL,
+                          username varchar NOT NULL,
                           refresh_token varchar NOT NULL,
                           expires_at timestamptz NOT NULL,
                           created_at timestamptz NOT NULL DEFAULT (now()),
@@ -21,8 +21,7 @@ CREATE TABLE sessions (
                           deleted_at timestamptz
 );
 
-ALTER TABLE sessions ADD CONSTRAINT fk_sessions_users FOREIGN KEY (email)
-    REFERENCES users (email);
+
 
 
 CREATE TABLE private_chats (

@@ -27,6 +27,7 @@ func newAuthRoutes(handler *gin.RouterGroup, a usecase.Auth, l logger.Interface)
 		h.POST("/register", r.registerUser)
 		h.POST("/login", r.loginUser)
 		h.POST("/token", r.renewAccessToken)
+		h.DELETE("/logout", r.deleteRefreshToken)
 	}
 
 }
@@ -194,6 +195,18 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 	var request renewAccessTokenRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		r.l.Error(err, "http - v1 - loginUser")
+		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	renewResponse, err := r.a.RenewAccessToken(
+		c.Request.Context(),
+		entity.RenewAccessTokenRequest{
+			RefreshToken: request.RefreshToken,
+		},
+	)
+	if err != nil {
 
 		unwrapedErr := errors.Unwrap(err)
 		// jika refresh token invalid / expired
@@ -212,18 +225,6 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 			return
 		}
 
-		r.l.Error(err, "http - v1 - loginUser")
-		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	renewResponse, err := r.a.RenewAccessToken(
-		c.Request.Context(),
-		entity.RenewAccessTokenRequest{
-			RefreshToken: request.RefreshToken,
-		},
-	)
-	if err != nil {
 		r.l.Error("http - v1- renewAccessToken")
 		ErrorResponse(c, http.StatusInternalServerError, "renewAccessToken service problems: "+err.Error())
 		return
@@ -235,4 +236,68 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, resp)
+}
+
+type deleteRefreshTokenRequest struct {
+	refreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type deleteRefreshTokenResponse struct {
+	responseMessage string `json:"response_message"`
+}
+
+// @Summary     delete refresh token & fanout offline status ke semua kontak milik user
+// @Description   delete refresh token & fanout offline status ke semua kontak milik user
+// @ID          deleteRefreshToken
+// @Tags  	    user
+// @Accept      json
+// @Produce     json
+// @Param       request body deleteRefreshTokenRequest true "Login  user"
+// @Success     200 {object} deleteRefreshTokenResponse
+// @Failure     400 {object} response
+// @Failure     500 {object} response
+// @Router      /v1/auth/token [post]
+// Author: https://github.com/lintang-b-s
+func (r *authRoutes) deleteRefreshToken(c *gin.Context) {
+	var request renewAccessTokenRequest
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		r.l.Error(err, "http - v1 - loginUser")
+		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := r.a.DeleteRefreshToken(
+		c.Request.Context(),
+		entity.DeleteRefreshTokenRequest{
+			RefreshToken: request.RefreshToken,
+		},
+	)
+	if err != nil {
+		unwrapedErr := errors.Unwrap(err)
+		// jika refresh token invalid / expired
+		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
+			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
+			return
+		}
+		// jika row pada db tidak ditemukan
+		if unwrapedErr == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+			return
+		}
+
+		if err.Error() == "Invalid session" {
+			ErrorResponse(c, http.StatusUnauthorized, "Refresh Token mismatch with refresh token in database")
+			return
+		}
+
+		r.l.Error("http - v1- deleteRefreshToken")
+		ErrorResponse(c, http.StatusInternalServerError, "deleteRefreshToken service problems: "+err.Error())
+		return
+	}
+
+	resp := deleteRefreshTokenResponse{
+		responseMessage: "refresh token successfully deleted!",
+	}
+	c.JSON(http.StatusOK, resp)
 }

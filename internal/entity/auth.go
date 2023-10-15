@@ -41,7 +41,7 @@ type LoginUserResponse struct {
 
 type Session struct {
 	ID           uuid.UUID `json:"id"`
-	Email        string    `json:"email"`
+	Username     string    `json:"username"`
 	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -49,7 +49,7 @@ type Session struct {
 
 type CreateSessionRequest struct {
 	ID           uuid.UUID `json:"id"`
-	Email        string    `json:"email"`
+	Username     string    `json:"username"`
 	RefreshToken string    `json:"refresh_token"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }
@@ -61,4 +61,12 @@ type RenewAccessTokenRequest struct {
 type RenewAccessTokenResponse struct {
 	AccessToken          string    `json:"access_token"`
 	AccessTokenExpiresAt time.Time `json:"access_token_expires_at"`
+}
+
+type DeleteRefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type DeleteRefreshTokenResponse struct {
+	ResponseMessage string `json:"response_message"`
 }

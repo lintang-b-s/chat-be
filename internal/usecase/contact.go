@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/lintangbs/chat-be/internal/entity"
-	"github.com/lintangbs/chat-be/internal/usecase/repo"
 )
 
 type ContactUseCase struct {
-	userRepo repo.UserRepo
+	userRepo UserRepo
 }
 
-func NewContactUseCase(u repo.UserRepo) *ContactUseCase {
+func NewContactUseCase(u UserRepo) *ContactUseCase {
 	return &ContactUseCase{
 		userRepo: u,
 	}

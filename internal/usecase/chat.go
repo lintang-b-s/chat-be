@@ -1,4 +1,4 @@
-package websocketc
+package usecase
 
 import (
 	"context"
@@ -6,11 +6,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/entity"
-	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"sort"
 
-	"github.com/lintangbs/chat-be/internal/usecase/repo"
-	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"log"
 	"strings"
@@ -33,14 +30,15 @@ type User struct {
 	inbox chan *entity.MessageWs
 }
 
+// Chat utk menyimpan semua client websocket yang terhubung ke chat-server ini
 type Chat struct {
 	mu        sync.RWMutex
 	seq       uint
-	PubSub    redisRepo.PubSubRedis
-	Rds       redispkg.Redis
-	edenAiApi webapi.EdenAIAPI
-	userPg    repo.UserRepo
-	usrRedis  redisRepo.UserRedisRepo
+	PubSub    PubSubRedis
+	Rds       *redispkg.Redis
+	edenAiApi EdenAiApi
+	userPg    UserRepo
+	usrRedis  UserRedisRepo
 
 	us        []*User
 	broadcast chan *entity.MessageWs
@@ -52,11 +50,11 @@ type Chat struct {
 	unregister chan *User
 }
 
-func NewChat(pubSub redisRepo.PubSubRedis,
-	ed webapi.EdenAIAPI,
-	userPg repo.UserRepo,
-	rds redispkg.Redis,
-	ud redisRepo.UserRedisRepo,
+func NewChat(pubSub PubSubRedis,
+	ed EdenAiApi,
+	userPg UserRepo,
+	rds *redispkg.Redis,
+	ud UserRedisRepo,
 ) *Chat {
 
 	return &Chat{PubSub: pubSub,
@@ -219,8 +217,8 @@ func (u *User) Receive() error {
 			}
 
 			// jika teman user berada di server yg berbeda dg server user sender
+			// publish ke chat-server teman
 			u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
-
 		}
 	}
 
@@ -352,24 +350,6 @@ func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username stri
 	// goroutine untuk menulis message websocket ke frontend
 	go user.writePump()
 
-	// salah
-	//pubSub := c.PubSub.SubscribeToChannel(ctx, username)
-	//
-	//newChannelPubSub := &redispkg.ChannelPubSub{
-	//	CloseChan:  make(chan struct{}, 1),
-	//	ClosedChan: make(chan struct{}, 1),
-	//	PubSub:     pubSub,
-	//}
-	//
-	//c.Rds.ChannelsPubSubSync.Lock()
-	//
-	//if _, ok := c.Rds.ChannelsPubSub[username]; !ok {
-	//	c.Rds.ChannelsPubSub[username] = newChannelPubSub
-	//}
-	//c.Rds.ChannelsPubSubSync.Unlock()
-	//
-	//go user.subscribePubSubAndSendToClientssalah(newChannelPubSub)
-
 	return user
 }
 
@@ -427,6 +407,7 @@ func (u *User) writePump() {
 	}
 }
 
+// Write mengirim messsage websocket ke client/frontend
 func (u *User) Write(op int, message *entity.MessageWs) error {
 	data, err := json.Marshal(message)
 	if err != nil {
