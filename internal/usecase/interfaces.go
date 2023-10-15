@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
+	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"github.com/redis/go-redis/v9"
 	"net"
 	"net/http"
@@ -69,6 +70,7 @@ type (
 	// Chat
 	Chat interface {
 		Register(context.Context, net.Conn, string, string) *websocketc.User
+		SubscribePubSubAndSendToClient(*redispkg.ChannelPubSub)
 	}
 
 	// EdenAiApi
@@ -90,6 +92,8 @@ type (
 	// UserRedisRepoI
 	UserRedisRepoI interface {
 		UserSetOnline(string) error
-		UserIsOnline(uuid string) bool
+		UserIsOnline(string) bool
+		SetUserServerLocation(string) error
+		GetUserServerLocation(string) (string, error)
 	}
 )

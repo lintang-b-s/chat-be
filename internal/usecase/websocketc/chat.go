@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/lintangbs/chat-be/internal/app"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
+	"sort"
 
 	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
@@ -29,16 +31,24 @@ type User struct {
 	Id   uint
 	Name string
 	Chat *Chat
+
+	inbox chan *entity.MessageWs
 }
 
 type Chat struct {
 	mu        sync.RWMutex
 	seq       uint
-	pubSub    redisRepo.PubSubRedis
-	rds       redispkg.Redis
+	PubSub    redisRepo.PubSubRedis
+	Rds       redispkg.Redis
 	edenAiApi webapi.EdenAIAPI
 	userPg    repo.UserRepo
 	usrRedis  redisRepo.UserRedisRepo
+
+	us        []*User
+	broadcast chan *entity.MessageWs
+
+	// Unregister requests from clients.
+	unregister chan *User
 }
 
 func NewChat(pubSub redisRepo.PubSubRedis,
@@ -47,7 +57,55 @@ func NewChat(pubSub redisRepo.PubSubRedis,
 	rds redispkg.Redis,
 	ud redisRepo.UserRedisRepo,
 ) *Chat {
-	return &Chat{pubSub: pubSub, edenAiApi: ed, userPg: userPg, rds: rds, usrRedis: ud}
+
+	return &Chat{PubSub: pubSub,
+
+		edenAiApi:  ed,
+		userPg:     userPg,
+		Rds:        rds,
+		usrRedis:   ud,
+		broadcast:  make(chan *entity.MessageWs),
+		unregister: make(chan *User),
+	}
+}
+
+func (c *Chat) Run() {
+	for {
+		select {
+		case user := <-c.unregister:
+			c.mu.Lock()
+			// binary search utk cari index user di array us
+			i := sort.Search(len(c.us), func(i int) bool {
+				return c.us[i].Id >= user.Id
+			})
+
+			// hapus client dari array chat.us
+			without := make([]*User, len(c.us)-1)
+			copy(without[:i], c.us[:i])
+			copy(without[i:], c.us[i+1:])
+			c.us = without
+			c.mu.Unlock()
+
+		case message := <-c.broadcast:
+			// menerima message dari user lain yg chat-servernya sama dg user
+			// mengirim ke user dg username sama dg recipient username di messageWs
+			c.sendToSpecificUserInboxInServer(message)
+		}
+	}
+}
+
+func (c *Chat) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
+	for _, user := range c.us {
+		// mengirim ke user dg username sama dg recipient username di messageWs
+		recipientUsername := message.PrivateChat.RecipientUsername
+		if user.Name == recipientUsername {
+			select {
+			case user.inbox <- message:
+			default:
+				close(user.inbox)
+			}
+		}
+	}
 }
 
 var (
@@ -106,10 +164,11 @@ func (u *User) Receive() error {
 		// private chat dg user lain yang sudah ditambahkan kontaknya
 		msgWs.PrivateChat.MessageId = uuid.New().String()
 		msgWs.PrivateChat.CreatedAt = time.Now()
+		friendUsername := msgWs.PrivateChat.RecipientUsername
 		isFriendErr := u.Chat.userPg.GetUserFriend(
 			context.Background(),
 			msgWs.PrivateChat.SenderUsername,
-			msgWs.PrivateChat.RecipientUsername,
+			friendUsername,
 		)
 		if isFriendErr != nil {
 			fmt.Println("u.Chat.pg.GetUserFriend: ", isFriendErr)
@@ -120,14 +179,20 @@ func (u *User) Receive() error {
 				log.Println("Write: ", err)
 				return err
 			}
-			return isFriendErr
+			return err
 
 		}
-		err = u.Chat.Broadcast(msgWs.PrivateChat.RecipientUsername, msgWs)
-		if err != nil {
-			fmt.Println("u.chat.Broadcast: ", err)
-			return err
+		friend, _ := u.Chat.userPg.GetUserByUsername(friendUsername)
+
+		isFriendInSameServer, friendServerLocation := u.Chat.isFriendInSameServer(friend.Id.String())
+		if isFriendInSameServer == true {
+			// Jika friend/recipient message berada di chat-server yg sama dg chat-server user
+			u.Chat.broadcast <- msgWs
+			return nil
 		}
+
+		// jika teman user berada di server yg berbeda dg server user sender
+		u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
 	}
 
 	return nil
@@ -153,6 +218,18 @@ func (u *User) pongHandler(pongMsg string) error {
 	return u.Conn.SetReadDeadline(time.Now().Add(pongWait))
 }
 
+// isFriendInSameServer  Jika friend/recipient message berada di chat-server yg sama dg chat-server user sender
+// return bool, friendServerLocation
+func (c *Chat) isFriendInSameServer(friendId string) (bool, string) {
+	friendServerLocation, _ := c.usrRedis.GetUserServerLocation(friendId)
+	isFriendOnline := c.usrRedis.UserIsOnline(friendId)
+	if isFriendOnline == true && friendServerLocation == app.ServerName {
+		// Jika teman user berada di server yg sama dg server user sender
+		return true, friendServerLocation
+	}
+	return false, ""
+}
+
 // userOnlineStatusFanout fanout user online status ke semua kontaknya
 func (c *Chat) userOnlineStatusFanout(username string, online bool) {
 	// Fanout User Online Status ke semua kontaknya
@@ -169,19 +246,16 @@ func (c *Chat) userOnlineStatusFanout(username string, online bool) {
 			Type:                  entity.MessageTypeOnlineStatusFanOut,
 			MsgOnlineStatusFanout: msgOnlineStatusFanout,
 		}
-		// dipublish kesemua teman userDb
-		c.pubSub.PublishToChannel(uFriend.Username, msgWs)
-	}
-}
+		isFriendInSameServer, friendServerLocation := c.isFriendInSameServer(uFriend.Id.String())
+		if isFriendInSameServer == true {
+			// Jika friend/recipient message berada di chat-server yg sama dg chat-server user sender
+			c.broadcast <- msgWs
+			continue
+		}
 
-// Broadcast sends message to all alive users.
-func (c *Chat) Broadcast(to string, msg *entity.MessageWs) error {
-	err := c.pubSub.PublishToChannel(to, msg)
-	if err != nil {
-		fmt.Println("c.rds.Client.Publish", err)
+		// jika chat server friend/recipient berbeda dg chat-server user sender
+		c.PubSub.PublishToChannel(friendServerLocation, msgWs)
 	}
-
-	return nil
 }
 
 // getAllFriendsOnlineStatus user akan mendapatkan status online/tidaknya semua teman/kontaknya
@@ -230,9 +304,13 @@ func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username stri
 		user.Id = c.seq
 		user.Name = username
 
+		c.us = append(c.us, user)
 		c.seq++
 	}
 	c.mu.Unlock()
+
+	// Register user chat-server location in redis
+	c.usrRedis.SetUserServerLocation(userId)
 
 	// Set User Online status (key,value) in redis
 	c.usrRedis.UserSetOnline(userId)
@@ -242,40 +320,37 @@ func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username stri
 	// Get online status semua kontak yang dimiliki user
 	user.getAllFriendsOnlineStatus(ctx, username)
 
-	// Client subscribe to redis channel (nama channel ya username si user sendiri)
-	// Untuk menerima message dari kontaknya
-	pubSub := c.pubSub.SubscribeToChannel(ctx, username)
+	// gorotuine untuk membaca message websocket yang dikriim dari frontend
+	go user.Receive()
+	// goroutine untuk menulis message websocket ke frontend
+	go user.writePump()
 
-	newChannelPubSub := &redispkg.ChannelPubSub{
-		CloseChan:  make(chan struct{}, 1),
-		ClosedChan: make(chan struct{}, 1),
-		PubSub:     pubSub,
-	}
-
-	c.rds.ChannelsPubSubSync.Lock()
-
-	if _, ok := c.rds.ChannelsPubSub[username]; !ok {
-		c.rds.ChannelsPubSub[username] = newChannelPubSub
-	}
-	c.rds.ChannelsPubSubSync.Unlock()
-
-	go user.subscribePubSubAndSendToClient(newChannelPubSub)
+	// salah
+	//pubSub := c.PubSub.SubscribeToChannel(ctx, username)
+	//
+	//newChannelPubSub := &redispkg.ChannelPubSub{
+	//	CloseChan:  make(chan struct{}, 1),
+	//	ClosedChan: make(chan struct{}, 1),
+	//	PubSub:     pubSub,
+	//}
+	//
+	//c.Rds.ChannelsPubSubSync.Lock()
+	//
+	//if _, ok := c.Rds.ChannelsPubSub[username]; !ok {
+	//	c.Rds.ChannelsPubSub[username] = newChannelPubSub
+	//}
+	//c.Rds.ChannelsPubSubSync.Unlock()
+	//
+	//go user.subscribePubSubAndSendToClientssalah(newChannelPubSub)
 
 	return user
 }
 
-// subscribePubSubAndSendToClient subscribe channel (nama channel username si user) , setiap ada message kirim ke client ini/recipient
-func (u *User) subscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubSub) {
+// SubscribePubSubAndSendToClient Subscribe ke channel chat-servernya lalu mempublish message ke specific user inbox
+// subcribe pubsub redis jika recipient berada di chat-server berbeda dg sender
+func (c *Chat) SubscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubSub) {
 	defer channelRedis.Closed()
-	// Create a ticker that triggers a ping at given interval
-	ticker := time.NewTicker(pingInterval)
-
-	defer func() {
-		ticker.Stop()
-		u.Conn.Close()
-	}()
 	for {
-
 		select {
 		case data := <-channelRedis.Channel():
 			msg := &entity.MessageWs{}
@@ -287,12 +362,43 @@ func (u *User) subscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubS
 				log.Println("dec.Decode", err)
 				return
 			} else {
-				err = u.Write(websocket.TextMessage, msg)
-				if err != nil {
-					log.Println(err)
-					return
-				}
+				c.sendToSpecificUserInboxInServer(msg)
 			}
+		}
+	}
+}
+
+// writePump mengirim message websocket ke user/client/frontend
+// 1 goroutine yg menjalankan writePump dijalankan di setiap koneksi client websocket.
+func (u *User) writePump() {
+
+	// Create a ticker that triggers a ping at given interval
+	ticker := time.NewTicker(pingInterval)
+
+	defer func() {
+		u.Chat.unregister <- u
+		ticker.Stop()
+		u.Conn.Close()
+	}()
+	for {
+
+		select {
+		//case data := <-channelRedis.Channel():
+		//	msg := &entity.MessageWs{}
+		//	dec := json.NewDecoder(strings.NewReader(data.Payload))
+		//
+		//	err := dec.Decode(msg)
+		//
+		//	if err != nil {
+		//		log.Println("dec.Decode", err)
+		//		return
+		//	} else {
+		//		err = u.Write(websocket.TextMessage, msg)
+		//		if err != nil {
+		//			log.Println(err)
+		//			return
+		//		}
+		//	}
 		case <-ticker.C:
 			log.Println("send ping messages to client " + u.Name + " !!")
 
@@ -301,6 +407,9 @@ func (u *User) subscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubS
 				log.Println("wsutil.WriteServerMessage", err)
 				return
 			}
+		case msgWs := <-u.inbox:
+			// menerima message dari inbox user, llau send wesbsocket message to client/user
+			u.Write(websocket.TextMessage, msgWs)
 		}
 	}
 }
