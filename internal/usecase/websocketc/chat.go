@@ -1,4 +1,4 @@
-package usecase
+package websocketc
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/entity"
+	"github.com/lintangbs/chat-be/internal/usecase"
 	"sort"
 
 	"github.com/lintangbs/chat-be/pkg/redispkg"
@@ -25,20 +26,20 @@ type User struct {
 
 	Id   uint
 	Name string
-	Chat *Chat
+	Chat *ChatHub
 
 	inbox chan *entity.MessageWs
 }
 
-// Chat utk menyimpan semua client websocket yang terhubung ke chat-server ini
-type Chat struct {
+// ChatHub utk menyimpan semua client websocket yang terhubung ke chat-server ini
+type ChatHub struct {
 	mu        sync.RWMutex
 	seq       uint
-	PubSub    PubSubRedis
+	PubSub    usecase.PubSubRedis
 	Rds       *redispkg.Redis
-	edenAiApi EdenAiApi
-	userPg    UserRepo
-	usrRedis  UserRedisRepo
+	edenAiApi usecase.EdenAiApi
+	userPg    usecase.UserRepo
+	usrRedis  usecase.UserRedisRepo
 
 	us        []*User
 	broadcast chan *entity.MessageWs
@@ -50,14 +51,14 @@ type Chat struct {
 	unregister chan *User
 }
 
-func NewChat(pubSub PubSubRedis,
-	ed EdenAiApi,
-	userPg UserRepo,
+func NewChat(pubSub usecase.PubSubRedis,
+	ed usecase.EdenAiApi,
+	userPg usecase.UserRepo,
 	rds *redispkg.Redis,
-	ud UserRedisRepo,
-) *Chat {
+	ud usecase.UserRedisRepo,
+) *ChatHub {
 
-	return &Chat{PubSub: pubSub,
+	return &ChatHub{PubSub: pubSub,
 
 		edenAiApi:  ed,
 		userPg:     userPg,
@@ -69,7 +70,7 @@ func NewChat(pubSub PubSubRedis,
 	}
 }
 
-func (c *Chat) Run() {
+func (c *ChatHub) Run() {
 	for {
 		select {
 		case user := <-c.register:
@@ -101,7 +102,7 @@ func (c *Chat) Run() {
 	}
 }
 
-func (c *Chat) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
+func (c *ChatHub) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 	for _, user := range c.us {
 
 		// mengirim ke user dg username sama dg recipient username di messageWs
@@ -247,7 +248,7 @@ func (u *User) pongHandler(pongMsg string) error {
 
 // isFriendInSameServer  Jika friend/recipient message berada di chat-server yg sama dg chat-server user sender
 // return bool, friendServerLocation
-func (c *Chat) isFriendInSameServer(friendId string) (bool, string) {
+func (c *ChatHub) isFriendInSameServer(friendId string) (bool, string) {
 	friendServerLocation, _ := c.usrRedis.GetUserServerLocation(friendId)
 	isFriendOnline := c.usrRedis.UserIsOnline(friendId)
 	if friendServerLocation == entity.ChatServerNameGlobal.ChatServerName && isFriendOnline == true {
@@ -258,7 +259,7 @@ func (c *Chat) isFriendInSameServer(friendId string) (bool, string) {
 }
 
 // userOnlineStatusFanout fanout user online status ke semua kontaknya
-func (c *Chat) userOnlineStatusFanout(username string, online bool) {
+func (c *ChatHub) userOnlineStatusFanout(username string, online bool) {
 	// Fanout User Online Status ke semua kontaknya
 	userDb, _ := c.userPg.GetUserFriends(context.Background(), username)
 	for _, uFriend := range userDb.Friends {
@@ -322,7 +323,7 @@ func (u *User) getAllFriendsOnlineStatus(ctx context.Context, username string) {
 }
 
 // Register registers new connection as a User.
-func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string, userId string,
+func (c *ChatHub) Register(ctx context.Context, conn *websocket.Conn, username string, userId string,
 ) *User {
 	user := &User{
 		Chat:  c,
@@ -355,7 +356,7 @@ func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username stri
 
 // SubscribePubSubAndSendToClient Subscribe ke channel chat-servernya lalu mempublish message ke specific user inbox
 // subcribe pubsub redis jika recipient berada di chat-server berbeda dg sender
-func (c *Chat) SubscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubSub) {
+func (c *ChatHub) SubscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubSub) {
 	defer channelRedis.Closed()
 	for {
 		select {

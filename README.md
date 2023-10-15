@@ -1,9 +1,16 @@
 # chat-be
  chat backend api using websocket, redis, and postgres.
 
+## ChatHub struct & User struct
+![ChatHub struct & User Struct](https://res.cloudinary.com/dex4u3rw4/image/upload/v1697371903/ChatHubdanUser_vjzyku.png)
 
-## 1 on 1 Chat Flow 
-![one-on-one chat flow](https://res.cloudinary.com/dex4u3rw4/image/upload/v1696433470/untitled_1_kii12d.png)
+
+
+## 1 on 1 Chat Flow (UserA dan UserB terhubung ke instan chat-server yang sama)
+![one-on-one chat flow server sama ](https://res.cloudinary.com/dex4u3rw4/image/upload/v1697371903/one-on-one-server-sama_ohixbk.png)
+
+## 1 on 1 Chat Flow (Semua user terhubung ke instan chat-server yang berbeda)
+![one-on-one chat flow server beda](https://res.cloudinary.com/dex4u3rw4/image/upload/v1697371913/one-on-one-beda-server_n2so7t.png)
 
 -
 
@@ -107,13 +114,8 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
 
 ## Online Presence
 
-### Login
-![user login mechanism](https://res.cloudinary.com/di0pjroxh/image/upload/v1697273467/user-login_yn8lex.png)
-
-
-
-### Logout
-![user logout mechanism](https://res.cloudinary.com/di0pjroxh/image/upload/v1697273472/user-logout_bxl1e2.png)
+### Login & Logout
+![user login mechanism](https://res.cloudinary.com/dex4u3rw4/image/upload/v1697362511/UserLoginLogout_cy1qtu.png)
 
 
 ### Heartbeat
@@ -122,7 +124,7 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
 ## Online Status Fanout
 
 ### Flow
-![online status fanout](https://res.cloudinary.com/di0pjroxh/image/upload/v1697272521/untitled_2_copy_kn5o8k.png)
+![online status fanout](https://res.cloudinary.com/dex4u3rw4/image/upload/v1697362511/online-status-fanout_ymceo7.png)
 
 ### Online status fanout message
 ![online status message fanout](https://res.cloudinary.com/di0pjroxh/image/upload/v1697272778/online-fanout-message_fb6q0e.png)

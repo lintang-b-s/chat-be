@@ -4,10 +4,11 @@ package usecase
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/entity"
+	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"github.com/redis/go-redis/v9"
-	"net"
 	"net/http"
 )
 
@@ -69,8 +70,8 @@ type (
 	}
 
 	// Chat
-	ChatUse interface {
-		Register(context.Context, net.Conn, string, string) *User
+	ChatHub interface {
+		Register(context.Context, *websocket.Conn, string, string) *websocketc.User
 		SubscribePubSubAndSendToClient(*redispkg.ChannelPubSub)
 	}
 
