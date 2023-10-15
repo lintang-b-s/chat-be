@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"gorm.io/gorm"
-	"log"
 	"time"
 )
 
@@ -141,10 +140,8 @@ func (r *UserRepo) GetUserFriends(ctx context.Context, username string) (entity.
 	var user User
 	queryRes := r.db.Where(&User{Username: username}).Preload("Friends").First(&user)
 	if err := queryRes.Error; err != nil {
-		return entity.UserResponse{}, nil
+		return entity.UserResponse{}, err
 	}
-
-	log.Println("friends: ", user.Friends)
 
 	var friendRes []entity.UserResponse
 	for _, uFriend := range user.Friends {

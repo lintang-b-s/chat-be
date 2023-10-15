@@ -158,7 +158,7 @@ func (c *Chat) userOnlineStatusFanout(username string, online bool) {
 	// Fanout User Online Status ke semua kontaknya
 	userDb, _ := c.userPg.GetUserFriends(context.Background(), username)
 	for _, uFriend := range userDb.Friends {
-		// user yg online (user yang mengirim pong message)
+		// status online user yg ingin dikirim ke semua kontaknya
 		msgOnlineStatusFanout := entity.MessageOnlineStatusFanout{
 			FriendId:       userDb.Id.String(),
 			FriendUsername: userDb.Username,

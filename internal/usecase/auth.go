@@ -16,17 +16,28 @@ type AuthUseCase struct {
 	jwtTokenMaker jwt.JwtTokenMaker
 	sessionRepo   SessionRepo
 	otpRepo       redisRepo.OtpRepo
+	usrRedisRepo  UserRedisRepo
+	pubSubRds     PubSubRedis
 }
 
-func NewAuthUseCase(r repo.UserRepo, j jwt.JwtTokenMaker, s SessionRepo, otpRepo redisRepo.OtpRepo) *AuthUseCase {
+func NewAuthUseCase(
+	r repo.UserRepo,
+	j jwt.JwtTokenMaker,
+	s SessionRepo,
+	otpRepo redisRepo.OtpRepo,
+	usrRedisRepo UserRedisRepo,
+	pubSub PubSubRedis) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo:      r,
 		jwtTokenMaker: j,
 		sessionRepo:   s,
 		otpRepo:       otpRepo,
+		usrRedisRepo:  usrRedisRepo,
+		pubSubRds:     pubSub,
 	}
 }
 
+// Bussines logic untuk register user baru
 func (uc *AuthUseCase) Register(ctx context.Context, c entity.CreateUserRequest) (entity.UserResponse, error) {
 	hashedPassword, err := util.HashPassword(c.Password)
 	if err != nil {
@@ -43,7 +54,7 @@ func (uc *AuthUseCase) Register(ctx context.Context, c entity.CreateUserRequest)
 	return createdUser, nil
 }
 
-// Login: logic login use case
+// Login:  bussines logic untuk login
 func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (entity.LoginUserResponse, error) {
 	user, err := uc.userRepo.GetUser(ctx, l.Email)
 	if err != nil {
@@ -67,6 +78,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 		return entity.LoginUserResponse{}, fmt.Errorf("AuthUseCase - Login - uc.jwtTokenMaker.CreateToken: %w", err)
 	}
 
+	// Create refresh Token
 	refreshToken, refreshPayload, err := uc.jwtTokenMaker.CreateToken(
 		user.Username,
 		168*time.Hour,
@@ -83,6 +95,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 		ExpiresAt:    refreshPayload.ExpiredAt,
 	}
 
+	// Save refresh token to database
 	session, err := uc.sessionRepo.CreateSession(
 		ctx,
 		createSessionReq,
@@ -116,6 +129,7 @@ func (uc *AuthUseCase) Login(ctx context.Context, l entity.LoginUserRequest) (en
 	return res, nil
 }
 
+// RenewAccessToken bussinees logic untuk memperbarui  accessToken
 func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAccessTokenRequest) (entity.RenewAccessTokenResponse, error) {
 	refreshPayload, err := uc.jwtTokenMaker.VerifyToken(r.RefreshToken)
 	if err != nil {
@@ -123,11 +137,14 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.jwtTokenMaker.VerifyToken: %w", err)
 	}
 
+	// mendaptkan session refresh tokken dari table session di  database postgres
 	session, err := uc.sessionRepo.GetSession(ctx, refreshPayload.ID)
 	if err != nil {
+		//  jika refresh token tidak ditemukan di database
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("AuthUseCase - RenewAccessToken - uc.sessionRepo.GetSession: %w", err)
 	}
 
+	// jika refreshToken (session) di database invalid
 	if session.Email != refreshPayload.Username {
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
 	}
@@ -136,6 +153,7 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 	}
 
 	if time.Now().After(session.ExpiresAt) {
+		// jika refresh token sudah expires
 		return entity.RenewAccessTokenResponse{}, fmt.Errorf("Invalid session")
 	}
 
@@ -152,4 +170,52 @@ func (uc *AuthUseCase) RenewAccessToken(ctx context.Context, r entity.RenewAcces
 		AccessTokenExpiresAt: accessTokenPayload.ExpiredAt,
 	}
 	return res, nil
+}
+
+// DeleteRefreshtoken Bussines logic untuk menghapus refresh token dari database
+func (uc *AuthUseCase) DeleteRefreshtoken(ctx context.Context, e entity.DeleteRefreshTokenRequest) (entity.DeleteRefreshTokenResponse, error) {
+	refreshPayload, err := uc.jwtTokenMaker.VerifyToken(e.RefreshToken)
+	if err != nil {
+		// Unauthorized , token yg dikrim tidak sama dg yg ada di database
+		return entity.DeleteRefreshTokenResponse{}, fmt.Errorf("AuthUseCase - DeleteRefreshtoken - uc.jwtTokenMaker.VerifyToken: %w", err)
+	}
+
+	// Delete refresh token di database
+	err = uc.sessionRepo.DeleteSession(ctx, refreshPayload.ID)
+	if err != nil {
+		// Session not found or error when delete sesssion
+		return entity.DeleteRefreshTokenResponse{}, fmt.Errorf("AuthUseCase - DeleteRefreshtoken - uc.sessionRepo.DeleteSession: %w", err)
+	}
+
+	// Get  user
+	user, err := uc.userRepo.GetUserByUsername(e.Username)
+	if err != nil {
+		// user not found
+		return entity.DeleteRefreshTokenResponse{}, fmt.Errorf("AuthUseCase - DeleteRefreshtoken - uc.userRepo.GetUserByUsername: %w", err)
+	}
+
+	// Set user offline status di redis
+	_ = uc.usrRedisRepo.UserSetOffline(user.Id.String())
+
+	// Get semua kontak yg dipunya user
+	userDb, err := uc.userRepo.GetUserFriends(ctx, user.Username)
+	for _, uFriend := range userDb.Friends {
+		//  status online user yg ingin dikirim ke semua kontaknya
+		msgOnlineStatusFanout := entity.MessageOnlineStatusFanout{
+			FriendId:       userDb.Id.String(),
+			FriendUsername: userDb.Username,
+			FriendEmail:    userDb.Email,
+			Online:         false,
+		}
+		msgWs := &entity.MessageWs{
+			Type:                  entity.MessageTypeOnlineStatusFanOut,
+			MsgOnlineStatusFanout: msgOnlineStatusFanout,
+		}
+		// dipublish kesemua teman userDb
+		uc.pubSubRds.PublishToChannel(uFriend.Username, msgWs)
+	}
+
+	return entity.DeleteRefreshTokenResponse{
+		ResponseMessage: "Refresh token has been deleted",
+	}, nil
 }

@@ -41,7 +41,7 @@ func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws useca
 	// Routers
 	h := handler.Group("/v1")
 	{
-		newAuthRoutes(h, a, l)
+		newAuthRoutes(h, a, l, jwt)
 		NewWebsocketRoutes(h, ws, l)
 		NewContactRoutes(h, &cont, l, jwt)
 	}

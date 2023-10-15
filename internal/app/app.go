@@ -66,6 +66,8 @@ func Run(cfg *config.Config) {
 		jwtTokenMaker,
 		repo.NewSessionRepo(gorm.Pool),
 		*redisRepo.NewOtp(redis),
+		redisRepo.NewUserRedisrepo(redis),
+		redisRepo.NewPubSubRedis(redis),
 	)
 
 	var (

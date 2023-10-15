@@ -5,7 +5,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
+	api "github.com/lintangbs/chat-be/internal/middleware"
 	"github.com/lintangbs/chat-be/internal/usecase"
+	"github.com/lintangbs/chat-be/internal/usecase/repo"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"github.com/lintangbs/chat-be/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
@@ -15,18 +17,21 @@ import (
 )
 
 type authRoutes struct {
-	a usecase.Auth
-	l logger.Interface
+	a   usecase.Auth
+	l   logger.Interface
+	jwt jwt.JwtTokenMaker
 }
 
-func newAuthRoutes(handler *gin.RouterGroup, a usecase.Auth, l logger.Interface) {
-	r := &authRoutes{a, l}
+func newAuthRoutes(handler *gin.RouterGroup, a usecase.Auth, l logger.Interface,
+	jwt jwt.JwtTokenMaker) {
+	r := &authRoutes{a, l, jwt}
 
 	h := handler.Group("/auth")
 	{
 		h.POST("/register", r.registerUser)
 		h.POST("/login", r.loginUser)
-		h.POST("/token", r.renewAccessToken)
+		h.POST("/token", r.renewAccessToken).Use(api.AuthMiddleware(r.jwt))
+		h.DELETE("/logout", r.deleteRefreshtoken).Use(api.AuthMiddleware(r.jwt))
 	}
 
 }
@@ -194,24 +199,6 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 	var request renewAccessTokenRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-
-		unwrapedErr := errors.Unwrap(err)
-		// jika refresh token invalid / expired
-		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
-			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
-			return
-		}
-		// jika row pada db tidak ditemukan
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
-			return
-		}
-
-		if err.Error() == "Invalid session" {
-			ErrorResponse(c, http.StatusUnauthorized, "Refresh Token mismatch with refresh token in database")
-			return
-		}
-
 		r.l.Error(err, "http - v1 - loginUser")
 		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
 		return
@@ -224,6 +211,24 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 		},
 	)
 	if err != nil {
+
+		unwrapedErr := errors.Unwrap(err)
+		if unwrapedErr == repo.SessionNotFoundError {
+			ErrorResponse(c, http.StatusBadRequest, unwrapedErr.Error())
+			return
+		}
+
+		// jika refresh token invalid / expired
+		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
+			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
+			return
+		}
+
+		if err.Error() == "Invalid session" {
+			ErrorResponse(c, http.StatusUnauthorized, "Refresh Token mismatch with refresh token in database")
+			return
+		}
+
 		r.l.Error("http - v1- renewAccessToken")
 		ErrorResponse(c, http.StatusInternalServerError, "renewAccessToken service problems: "+err.Error())
 		return
@@ -235,4 +240,73 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, resp)
+}
+
+type deleteRefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type deleteRefreshTokenResponse struct {
+	ResponseMessage string `json:"response_message"`
+}
+
+// @Summary     logout, delete refreshtoken, delete user online status in redis
+// @Description    logout, delete refreshtoken, delete user online status in redis
+// @ID          deleteRefreshtoken
+// @Tags  	    user
+// @Accept      json
+// @Produce     json
+// @Param       request body deleteRefreshTokenRequest true "Delete refresh token request body"
+// @Success     200 {object} deleteRefreshTokenResponse
+// @Failure     400 {object} response
+// @Failure     500 {object} response
+// @Router      /v1/auth/logout [delete]
+// Author: https://github.com/lintang-b-s
+func (r *authRoutes) deleteRefreshtoken(c *gin.Context) {
+	var request deleteRefreshTokenRequest
+
+	authPayload := c.MustGet(api.AuthorizationPayloadKey).(*jwt.Payload)
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+
+		r.l.Error(err, "http - v1 - deleteRefreshtoken")
+		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	delResponse, err := r.a.DeleteRefreshtoken(
+		c.Request.Context(),
+		entity.DeleteRefreshTokenRequest{
+			RefreshToken: request.RefreshToken,
+			Username:     authPayload.Username,
+		},
+	)
+	if err != nil {
+		unwrapedErr := errors.Unwrap(err)
+		// jika refresh token invalid / expired
+		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
+			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
+			return
+		}
+
+		if unwrapedErr == repo.SessionNotFoundError {
+			ErrorResponse(c, http.StatusBadRequest, unwrapedErr.Error())
+			return
+		}
+
+		if unwrapedErr == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+			return
+		}
+
+		r.l.Error("http - v1- deleteRefreshtoken")
+		ErrorResponse(c, http.StatusInternalServerError, "deleteRefreshtoken service problems: "+err.Error())
+		return
+	}
+
+	res := deleteRefreshTokenResponse{
+		ResponseMessage: delResponse.ResponseMessage,
+	}
+
+	c.JSON(http.StatusOK, res)
 }
