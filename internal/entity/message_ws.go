@@ -30,10 +30,11 @@ type MessagePrivateChat struct {
 
 // MessageOnlineStatusFanout Message ws untuk fanout user online status ke semua kontak user
 type MessageOnlineStatusFanout struct {
-	FriendId       string `json:"friend_id"`
-	FriendUsername string `json:"friend_username"`
-	FriendEmail    string `json:"friend_email"`
-	Online         bool   `json:"online"`
+	FriendId          string `json:"friend_id"`
+	FriendUsername    string `json:"friend_username"`
+	FriendEmail       string `json:"friend_email"`
+	Online            bool   `json:"online"`
+	UserToGetNotified string `json:"user_to_get_notified,omitempty"`
 }
 
 // MessageFriendsOnlineStatus Message ws untuk melihat status online semua kontak/teman dari usernya

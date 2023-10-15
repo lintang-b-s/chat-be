@@ -17,6 +17,7 @@ func NewWebsocketRoutes(h *gin.RouterGroup, w usecase.Websocket, l logger.Interf
 	r := &WebbsocketRoutes{w, l}
 
 	h.GET("/ws", r.websocketHandlerRoute)
+
 }
 
 // websocketHandler handler saat buka koneksi websocketc

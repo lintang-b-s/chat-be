@@ -1,7 +1,7 @@
 package entity
 
-import "github.com/google/uuid"
+var ChatServerNameGlobal *ServerName
 
-var (
-	ServerName = "chat-server" + uuid.New().String()
-)
+type ServerName struct {
+	ChatServerName string
+}

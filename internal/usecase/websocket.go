@@ -21,13 +21,13 @@ var (
 type WebsocketUseCase struct {
 	otpRepo redisRepo.OtpRepo
 	userPg  repo.UserRepo
-	chat    websocketc.Chat
+	chat    *websocketc.Chat
 	poller  netpoll.Poller
 	gopool  *gopool.Pool
 }
 
 // NewWebsocket Create new websocketUseCase
-func NewWebsocket(otp redisRepo.OtpRepo, chat websocketc.Chat, p netpoll.Poller, gp *gopool.Pool,
+func NewWebsocket(otp redisRepo.OtpRepo, chat *websocketc.Chat, p netpoll.Poller, gp *gopool.Pool,
 	uPg repo.UserRepo) *WebsocketUseCase {
 	return &WebsocketUseCase{
 		otp, uPg, chat, p, gp}

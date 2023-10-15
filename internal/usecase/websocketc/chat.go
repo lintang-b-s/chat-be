@@ -96,7 +96,7 @@ func (c *Chat) Run() {
 			c.mu.Unlock()
 
 		case message := <-c.broadcast:
-			// menerima message dari user lain yg chat-servernya sama dg user
+			// menerima message da	ri user lain yg chat-servernya sama dg user
 			// mengirim ke user dg username sama dg recipient username di messageWs
 			c.sendToSpecificUserInboxInServer(message)
 		}
@@ -108,14 +108,23 @@ func (c *Chat) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 
 		// mengirim ke user dg username sama dg recipient username di messageWs
 		recipientUsername := message.PrivateChat.RecipientUsername
-		rcpFanoutUsername := message.MsgOnlineStatusFanout.FriendUsername
-		if user.Name == recipientUsername || user.Name == rcpFanoutUsername {
+		rcpFanoutUsername := message.MsgOnlineStatusFanout.UserToGetNotified
 
-			select {
-			case user.inbox <- message:
-
+		switch message.Type {
+		case entity.MessageTypePrivateChat:
+			if user.Name == recipientUsername {
+				select {
+				case user.inbox <- message:
+				}
+			}
+		case entity.MessageTypeOnlineStatusFanOut:
+			if user.Name == rcpFanoutUsername {
+				select {
+				case user.inbox <- message:
+				}
 			}
 		}
+
 	}
 }
 
@@ -157,14 +166,14 @@ func (u *User) Receive() error {
 		_, msg, err := u.Conn.ReadMessage()
 
 		if err != nil {
-			return err
+			break
 		}
 
 		msgWs := &entity.MessageWs{}
 		if err = json.Unmarshal(msg, msgWs); err != nil {
 			log.Println("json.Unmarshal: ", err)
-			//continue
-			return err
+
+			break
 		}
 
 		switch msgWs.Type {
@@ -211,6 +220,7 @@ func (u *User) Receive() error {
 
 			// jika teman user berada di server yg berbeda dg server user sender
 			u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
+
 		}
 	}
 
@@ -242,11 +252,11 @@ func (u *User) pongHandler(pongMsg string) error {
 func (c *Chat) isFriendInSameServer(friendId string) (bool, string) {
 	friendServerLocation, _ := c.usrRedis.GetUserServerLocation(friendId)
 	isFriendOnline := c.usrRedis.UserIsOnline(friendId)
-	if isFriendOnline == true && friendServerLocation == entity.ServerName {
+	if friendServerLocation == entity.ChatServerNameGlobal.ChatServerName && isFriendOnline == true {
 		// Jika teman user berada di server yg sama dg server user sender
-		return true, friendServerLocation
+		return true, ""
 	}
-	return false, ""
+	return false, friendServerLocation
 }
 
 // userOnlineStatusFanout fanout user online status ke semua kontaknya
@@ -254,12 +264,14 @@ func (c *Chat) userOnlineStatusFanout(username string, online bool) {
 	// Fanout User Online Status ke semua kontaknya
 	userDb, _ := c.userPg.GetUserFriends(context.Background(), username)
 	for _, uFriend := range userDb.Friends {
+		// send notification ke semua kontaknya bahwa user masih online
 		// user yg online (user yang mengirim pong message)
 		msgOnlineStatusFanout := entity.MessageOnlineStatusFanout{
-			FriendId:       userDb.Id.String(),
-			FriendUsername: userDb.Username,
-			FriendEmail:    userDb.Email,
-			Online:         online,
+			FriendId:          userDb.Id.String(),
+			FriendUsername:    userDb.Username,
+			FriendEmail:       userDb.Email,
+			Online:            online,
+			UserToGetNotified: uFriend.Username,
 		}
 		msgWs := &entity.MessageWs{
 			Type:                  entity.MessageTypeOnlineStatusFanOut,
@@ -312,7 +324,8 @@ func (u *User) getAllFriendsOnlineStatus(ctx context.Context, username string) {
 }
 
 // Register registers new connection as a User.
-func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string, userId string) *User {
+func (c *Chat) Register(ctx context.Context, conn *websocket.Conn, username string, userId string,
+) *User {
 	user := &User{
 		Chat:  c,
 		Conn:  conn,
@@ -367,6 +380,7 @@ func (c *Chat) SubscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubS
 	for {
 		select {
 		case data := <-channelRedis.Channel():
+
 			msg := &entity.MessageWs{}
 			dec := json.NewDecoder(strings.NewReader(data.Payload))
 
@@ -376,6 +390,7 @@ func (c *Chat) SubscribePubSubAndSendToClient(channelRedis *redispkg.ChannelPubS
 				log.Println("dec.Decode", err)
 				return
 			} else {
+
 				c.sendToSpecificUserInboxInServer(msg)
 			}
 		}

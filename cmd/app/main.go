@@ -1,11 +1,21 @@
 package main
 
 import (
+	"github.com/google/uuid"
 	"log"
 
 	"github.com/lintangbs/chat-be/config"
 	"github.com/lintangbs/chat-be/internal/app"
 )
+
+var ServerName string
+
+func init() {
+	ServerName = InitApp()
+}
+func InitApp() string {
+	return "chat-server" + uuid.New().String()
+}
 
 // @title API
 // @version 2.0

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gin-contrib/cors"
+	uuid2 "github.com/google/uuid"
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
@@ -88,25 +89,15 @@ func Run(cfg *config.Config) {
 	// start subscriber channel chat-server-serverName
 	// Client subscribe to redis channel (nama channel ya username si user sendiri)
 	// Untuk menerima message dari kontaknya
-	pubSub := chat.PubSub.SubscribeToChannel(context.Background(), entity.ServerName)
-
-	newChannelPubSub := &redispkg.ChannelPubSub{
-		CloseChan:  make(chan struct{}, 1),
-		ClosedChan: make(chan struct{}, 1),
-		PubSub:     pubSub,
+	entity.ChatServerNameGlobal = &entity.ServerName{
+		ChatServerName: "chat-server" + uuid2.New().String(),
 	}
 
-	chat.Rds.ChannelsPubSubSync.Lock()
-
-	if _, ok := chat.Rds.ChannelsPubSub[entity.ServerName]; !ok {
-		chat.Rds.ChannelsPubSub[entity.ServerName] = newChannelPubSub
-	}
-	chat.Rds.ChannelsPubSubSync.Unlock()
-	go chat.SubscribePubSubAndSendToClient(newChannelPubSub)
+	fmt.Println("chat-server: ", entity.ChatServerNameGlobal)
 
 	webSocketUseCase := usecase.NewWebsocket(
 		*redisRepo.NewOtp(redis),
-		*chat,
+		chat,
 		poller,
 		pool,
 		*repo.NewUserRepo(gorm.Pool),
@@ -123,6 +114,23 @@ func Run(cfg *config.Config) {
 
 	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, *contactUseCase, jwtTokenMaker)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
+
+	pubSub := chat.PubSub.SubscribeToChannel(context.Background(), entity.ChatServerNameGlobal.ChatServerName)
+
+	newChannelPubSub := &redispkg.ChannelPubSub{
+		CloseChan:  make(chan struct{}, 1),
+		ClosedChan: make(chan struct{}, 1),
+		PubSub:     pubSub,
+	}
+
+	chat.Rds.ChannelsPubSubSync.Lock()
+
+	if _, ok := chat.Rds.ChannelsPubSub[entity.ChatServerNameGlobal.ChatServerName]; !ok {
+		chat.Rds.ChannelsPubSub[entity.ChatServerNameGlobal.ChatServerName] = newChannelPubSub
+	}
+	chat.Rds.ChannelsPubSubSync.Unlock()
+
+	go chat.SubscribePubSubAndSendToClient(newChannelPubSub)
 
 	// Waiting signal
 	interrupt := make(chan os.Signal, 1)
