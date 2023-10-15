@@ -16,11 +16,11 @@ var (
 type WebsocketUseCase struct {
 	otpRepo OtpRepo
 	userPg  UserRepo
-	chat    *Chat
+	chat    *ChatHub
 }
 
 // NewWebsocket Create new websocketUseCase
-func NewWebsocket(otp OtpRepo, chat *Chat,
+func NewWebsocket(otp OtpRepo, chat *ChatHub,
 	uPg UserRepo) *WebsocketUseCase {
 	return &WebsocketUseCase{
 		otp, uPg, chat}

@@ -1,4 +1,4 @@
-package websocketc
+package usecase
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/entity"
-	"github.com/lintangbs/chat-be/internal/usecase"
 	"sort"
 
 	"github.com/lintangbs/chat-be/pkg/redispkg"
@@ -35,11 +34,11 @@ type User struct {
 type ChatHub struct {
 	mu        sync.RWMutex
 	seq       uint
-	PubSub    usecase.PubSubRedis
+	PubSub    PubSubRedis
 	Rds       *redispkg.Redis
-	edenAiApi usecase.EdenAiApi
-	userPg    usecase.UserRepo
-	usrRedis  usecase.UserRedisRepo
+	edenAiApi EdenAiApi
+	userPg    UserRepo
+	usrRedis  UserRedisRepo
 
 	us        []*User
 	broadcast chan *entity.MessageWs
@@ -51,11 +50,11 @@ type ChatHub struct {
 	unregister chan *User
 }
 
-func NewChat(pubSub usecase.PubSubRedis,
-	ed usecase.EdenAiApi,
-	userPg usecase.UserRepo,
+func NewChat(pubSub PubSubRedis,
+	ed EdenAiApi,
+	userPg UserRepo,
 	rds *redispkg.Redis,
-	ud usecase.UserRedisRepo,
+	ud UserRedisRepo,
 ) *ChatHub {
 
 	return &ChatHub{PubSub: pubSub,

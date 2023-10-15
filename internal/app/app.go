@@ -10,7 +10,6 @@ import (
 	"github.com/lintangbs/chat-be/internal/entity"
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
-	"github.com/lintangbs/chat-be/internal/usecase/websocketc"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"os"
@@ -57,7 +56,7 @@ func Run(cfg *config.Config) {
 		redisRepo.NewUserRedisrepo(redis),
 	)
 
-	chat := websocketc.NewChat(
+	chat := usecase.NewChat(
 		redisRepo.NewPubSubRedis(redis),
 		edenAi,
 		repo.NewUserRepo(gorm.Pool),
