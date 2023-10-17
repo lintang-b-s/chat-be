@@ -97,4 +97,15 @@ type (
 		SetUserServerLocation(string) error
 		GetUserServerLocation(string) (string, error)
 	}
+
+	//	 PrivateChatRepo
+	PrivateChatRepo interface {
+		InsertPrivateChat(entity.InsertPrivateChatRequest) (entity.PrivateChatMessage, error)
+		GetPrivateChatByUser(entity.GetPrivateChatQueryByUserRequest) (entity.PrivateChatUsers, error)
+	}
+
+	//
+	Message interface {
+		GetMessageByUserLogin(context.Context, entity.GetPrivateChatByUserRequest) (entity.PrivateChatUsers, error)
+	}
 )

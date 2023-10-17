@@ -3,9 +3,10 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/lintangbs/chat-be/internal/entity"
+	sonyflake2 "github.com/lintangbs/chat-be/internal/util/sonyflake"
+	"github.com/sony/sonyflake"
 	"sort"
 
 	"github.com/lintangbs/chat-be/pkg/redispkg"
@@ -30,6 +31,8 @@ type User struct {
 	inbox chan *entity.MessageWs
 }
 
+var sf *sonyflake.Sonyflake
+
 // ChatHub utk menyimpan semua client websocket yang terhubung ke chat-server ini
 type ChatHub struct {
 	mu        sync.RWMutex
@@ -39,6 +42,8 @@ type ChatHub struct {
 	edenAiApi EdenAiApi
 	userPg    UserRepo
 	usrRedis  UserRedisRepo
+	pChat     PrivateChatRepo
+	idGen     sonyflake2.IdGenerator
 
 	us        []*User
 	broadcast chan *entity.MessageWs
@@ -55,6 +60,8 @@ func NewChat(pubSub PubSubRedis,
 	userPg UserRepo,
 	rds *redispkg.Redis,
 	ud UserRedisRepo,
+	pc PrivateChatRepo,
+	idGen sonyflake2.IdGenerator,
 ) *ChatHub {
 
 	return &ChatHub{PubSub: pubSub,
@@ -66,6 +73,8 @@ func NewChat(pubSub PubSubRedis,
 		broadcast:  make(chan *entity.MessageWs),
 		unregister: make(chan *User),
 		register:   make(chan *User),
+		pChat:      pc,
+		idGen:      idGen,
 	}
 }
 
@@ -177,7 +186,7 @@ func (u *User) Receive() error {
 		switch msgWs.Type {
 		case entity.MessageTypePrivateChatBot:
 			resText := u.Chat.edenAiApi.GenerateText(msgWs.PrivateChat.Message)
-			msgWs.PrivateChat.MessageId = uuid.New().String()
+			msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
 			msgWs.PrivateChat.CreatedAt = time.Now()
 			msgWs.PrivateChat.Message = resText
 			err = u.Write(websocket.TextMessage, msgWs)
@@ -187,9 +196,10 @@ func (u *User) Receive() error {
 			}
 		case entity.MessageTypePrivateChat:
 			// private chat dg user lain yang sudah ditambahkan kontaknya
-			msgWs.PrivateChat.MessageId = uuid.New().String()
+			msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
 			msgWs.PrivateChat.CreatedAt = time.Now()
 			friendUsername := msgWs.PrivateChat.RecipientUsername
+
 			isFriendErr := u.Chat.userPg.GetUserFriend(
 				context.Background(),
 				msgWs.PrivateChat.SenderUsername,
@@ -208,8 +218,20 @@ func (u *User) Receive() error {
 
 			}
 			friend, _ := u.Chat.userPg.GetUserByUsername(friendUsername)
-
 			isFriendInSameServer, friendServerLocation := u.Chat.isFriendInSameServer(friend.Id.String())
+			sender, err := u.Chat.userPg.GetUserByUsername(msgWs.PrivateChat.SenderUsername)
+
+			//	 Save Private Chat message to db
+			pc := entity.InsertPrivateChatRequest{
+				MessageId:   msgWs.PrivateChat.MessageId,
+				MessageTo:   friend.Id,
+				MessageFrom: sender.Id,
+				Content:     msgWs.PrivateChat.Message,
+			}
+			_, err = u.Chat.pChat.InsertPrivateChat(pc)
+			if err != nil {
+				log.Println("Recive() - u.Chat.pChat.InsertPrivateChat:", err)
+			}
 			if isFriendInSameServer == true {
 				// Jika friend/recipient message berada di chat-server yg sama dg chat-server user
 				u.Chat.broadcast <- msgWs
@@ -219,6 +241,7 @@ func (u *User) Receive() error {
 			// jika teman user berada di server yg berbeda dg server user sender
 			// publish ke chat-server teman
 			u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
+
 		}
 	}
 

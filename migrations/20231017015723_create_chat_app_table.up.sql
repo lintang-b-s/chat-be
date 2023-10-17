@@ -25,7 +25,7 @@ CREATE TABLE sessions (
 
 
 CREATE TABLE private_chats (
-                               message_id bigint PRIMARY KEY NOT NULL,
+                               id bigint PRIMARY KEY NOT NULL,
                                message_from uuid NOT NULL ,
                                message_to uuid NOT NULL,
                                content text NOT NULL ,
@@ -43,7 +43,7 @@ ALTER TABLE private_chats ADD CONSTRAINT fk_private_chats_users_to FOREIGN KEY (
 
 
 CREATE TABLE group_chats (
-                             channel_id bigint  NOT NULL,
+                             id bigint  NOT NULL,
                              message_id uuid NOT NULL,
                              user_id bigint NOT NULL,
                              content text NOT NULL ,
@@ -52,7 +52,7 @@ CREATE TABLE group_chats (
                              deleted_at timestamptz
 );
 
-ALTER TABLE ONLY  group_chats ADD CONSTRAINT "ID_PKEY" PRIMARY KEY (channel_id,message_id);
+ALTER TABLE ONLY  group_chats ADD CONSTRAINT "ID_PKEY" PRIMARY KEY (id,message_id);
 
 
 ALTER TABLE group_chats ADD CONSTRAINT fk_group_chats_users_from FOREIGN KEY (message_id)

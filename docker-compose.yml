@@ -38,15 +38,15 @@ services:
 #      - rabbitmq
 
 
-#  redis:
-#    image: redis:7.0.1-alpine3.16
-#    container_name: redispkg
-#    hostname: redispkg
-#    restart: always
-#    ports:
-#      - 6378:6379
-#    command: >
-#      --requirepass passwordRedis
+  redis:
+    image: redis:7.0.1-alpine3.16
+    container_name: redispkg
+    hostname: redispkg
+    restart: always
+    ports:
+      - 6378:6379
+    command: >
+      --requirepass passwordRedis
 
 
 volumes:

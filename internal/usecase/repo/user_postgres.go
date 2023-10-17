@@ -56,7 +56,7 @@ func (r *UserRepo) CreateUser(ctx context.Context, e entity.CreateUserRequest) (
 
 	userId := uuid.New()
 	user := User{ID: userId, Username: e.Username, HashedPassword: e.Password, Email: e.Email, Friends: []*User{}}
-	if result := r.db.Create(&user); result.Error != nil {
+	if result = r.db.Create(&user); result.Error != nil {
 		// internal server error
 		return entity.UserResponse{}, fmt.Errorf("AuthRepo - Createuser - r.db.Create: %w", result.Error)
 	}
@@ -186,11 +186,6 @@ func (r *UserRepo) GetUserFriend(ctx context.Context, myUsername string, friendU
 
 	return nil
 }
-
-//// GetAllUsers Mendapatkan semua user
-//func (r *UserRepo) GetAllUsers(ctx context.Context) ([]entity.UserResponse, error) {
-//
-//}
 
 // GetUser mendapatkan user berdasarkan username di db
 func (r *UserRepo) GetUserByUsername(username string) (entity.GetUser, error) {

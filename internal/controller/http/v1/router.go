@@ -23,7 +23,8 @@ import (
 // @version     1.0
 // @host        localhost:8080
 // @BasePath    /v1
-func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws usecase.Websocket, cont usecase.ContactUseCase, jwt jwt.JwtTokenMaker) {
+func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws usecase.Websocket, cont usecase.Contact, jwt jwt.JwtTokenMaker,
+	mus usecase.Message) {
 	// Options
 	handler.Use(gin.Logger())
 	handler.Use(gin.Recovery())
@@ -43,6 +44,7 @@ func NewRouter(handler *gin.Engine, l logger.Interface, a usecase.Auth, ws useca
 	{
 		newAuthRoutes(h, a, l)
 		NewWebsocketRoutes(h, ws, l)
-		NewContactRoutes(h, &cont, l, jwt)
+		NewContactRoutes(h, cont, l, jwt)
+		NewMessageRoutes(h, mus, l, jwt)
 	}
 }

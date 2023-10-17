@@ -20,7 +20,7 @@ type MessageWs struct {
 
 // MessagePrivateChat message untuk private chat
 type MessagePrivateChat struct {
-	MessageId         string `json:"message_id,omitempty"`
+	MessageId         uint64 `json:"message_id,omitempty"`
 	SenderUsername    string `json:"sender_username"`
 	RecipientUsername string `json:"recipient_username"`
 	//GroupId           string      `json:"group_id"`

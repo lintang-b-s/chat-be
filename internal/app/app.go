@@ -11,6 +11,7 @@ import (
 	"github.com/lintangbs/chat-be/internal/usecase/redisRepo"
 	"github.com/lintangbs/chat-be/internal/usecase/webapi"
 	"github.com/lintangbs/chat-be/internal/util/jwt"
+	"github.com/lintangbs/chat-be/internal/util/sonyflake"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"os"
 	"os/signal"
@@ -38,7 +39,7 @@ func Run(cfg *config.Config) {
 	gorm, err := gorm.NewGorm(cfg.Postgres.Username, cfg.Postgres.Password)
 
 	// jwt
-	jwtTokenMaker, err := jwt.NewJWTMaker("eyJhbGciOiJIUzI1NiJ9.eyJSb2xlIjoiQWRtaW4iLCJJc3N1ZXIiOiJJc3N1ZXIiLCJVc2VybmFtZSI6IkphdmFJblVzZSIsImV4cCI6MTY5NjkyMDA0MywiaWF0IjoxNjk2OTIwMDQzfQ.6x0sgC9T1l64c2IpuCT3WBnw02ZRmHZI-iq4rP5cA9s")
+	jwtTokenMaker, err := jwt.NewJWTMaker("VBKNhRGFYZWGtbQ8hQ6ABQn1oNbYkHTu/fj/cUUO9p8=")
 
 	// EdenAi API
 	edenAi := webapi.NewEdenAIAPI(cfg.EdenAi.ApiKey)
@@ -62,6 +63,8 @@ func Run(cfg *config.Config) {
 		repo.NewUserRepo(gorm.Pool),
 		redis,
 		redisRepo.NewUserRedisrepo(redis),
+		repo.NewPrivateChatRepo(gorm.Pool),
+		sonyflake.NewSonyFlake(),
 	)
 
 	go chat.Run()
@@ -82,12 +85,17 @@ func Run(cfg *config.Config) {
 		repo.NewUserRepo(gorm.Pool),
 	)
 
+	messageUseCase := usecase.NewMessageuseCase(
+		repo.NewPrivateChatRepo(gorm.Pool),
+		repo.NewUserRepo(gorm.Pool),
+	)
+
 	// HTTP Server
 	handler := gin.New()
 
 	handler.Use(cors.Default())
 
-	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, *contactUseCase, jwtTokenMaker)
+	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, contactUseCase, jwtTokenMaker, messageUseCase)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
 	// start subscriber channel chat-server-serverName

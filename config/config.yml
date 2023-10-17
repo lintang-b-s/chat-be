@@ -14,12 +14,10 @@ postgres:
   username: postgres
   password: pass
 
-rabbitmq:
-  rpc_server_exchange: 'rpc_server'
-  rpc_client_exchange: 'rpc_client'
+
 
 redis:
   server_address: ':6379'
   host: chat-redispkg
-  address: 6378
+  address: 6379
   password: passwordRedis
