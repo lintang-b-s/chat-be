@@ -16,9 +16,9 @@
 ```
 
 ## Content
-- [General System Design Part 1](##1-on-1-chat-flow-(userA-dan-userB-terhubung-ke-instan-chat-server-yang-sama))
-- [Quick Start / Cara menjalankan Aplikasi](##quick-start)
-- [General System Design Part 2](##online-presence)
+- [General System Design Part 1](#1-on-1-chat-flow-(userA-dan-userB-terhubung-ke-instan-chat-server-yang-sama))
+- [Quick Start / Cara menjalankan Aplikasi](#quick-start)
+- [General System Design Part 2](#online-presence)
 
 
 ## ChatHub struct & User struct
