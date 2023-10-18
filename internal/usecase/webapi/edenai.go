@@ -27,7 +27,7 @@ func NewEdenAIAPI(apiKey string) *EdenAIAPI {
 func (api *EdenAIAPI) GenerateText(text string) (string, error) {
 	url := "https://api.edenai.run/v2/text/generation"
 
-	payload := strings.NewReader("{\"response_as_dict\":true,\"attributes_as_list\":false,\"show_original_response\":false,\"temperature\":0,\"max_tokens\":1000,\"providers\":\"ai21labs\",\"text\":" + "\"" + text + "\"" + "}")
+	payload := strings.NewReader("{\"response_as_dict\":true,\"attributes_as_list\":false,\"show_original_response\":false,\"temperature\":0,\"max_tokens\":700,\"providers\":\"ai21labs\",\"text\":" + "\"" + text + "\"" + "}")
 
 	req, err := http.NewRequest("POST", url, payload)
 	if err != nil {

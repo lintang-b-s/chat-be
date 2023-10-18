@@ -19,6 +19,7 @@ type MessageWs struct {
 	MsgOnlineStatusFanout  MessageOnlineStatusFanout  `json:"msg_online_status_fanout,omitempty"`
 	MsgFriendsOnlineStatus MessageFriendsOnlineStatus `json:"msg_friends_online_status,omitempty"`
 	MsgGroupChat           MessageGroupChat           `json:"group_chat,omitempty"`
+	MsgGroupChatBot        MessageGroupChatBot        `json:"group_chat_bot,omitempty"`
 }
 
 // MessagePrivateChat message untuk private chat
@@ -57,6 +58,16 @@ type MessageGroupChat struct {
 	CreatedAt         time.Time `json:"created_at,omitempty"`
 }
 
+// MessageGroupChatBot message untuk memanggil chatbot didalam groupChat
+type MessageGroupChatBot struct {
+	GroupName         string    `json:"group_name"`
+	MessageId         uint64    `json:"message_id,omitempty"`
+	SenderUsername    string    `json:"sender_username"`
+	RecipientUsername string    `json:"recipient_username,omitempty"` // diisi ketika broadcast ke channel broadcast/ channell redis
+	Content           string    `json:"message"`
+	CreatedAt         time.Time `json:"created_at,omitempty"`
+}
+
 // Friend Struktur data user
 type Friend struct {
 	FriendId       string `json:"friend_id"`
@@ -79,4 +90,5 @@ const (
 	MessageTypePrivateChatJoin     MessageType = "private_chat_join"
 	MessageTypeGroupChatJoin       MessageType = "group_chat_join"
 	MessageTypeFriendsOnlineStatus MessageType = "friends_online_status"
+	MessageTypeGroupChatBot        MessageType = "group_chatbot"
 )

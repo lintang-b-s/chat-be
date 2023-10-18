@@ -123,6 +123,7 @@ func (c *ChatHub) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 		recipientUsername := message.PrivateChat.RecipientUsername
 		rcpFanoutUsername := message.MsgOnlineStatusFanout.UserToGetNotified
 		rcpGroupChat := message.MsgGroupChat.RecipientUsername
+		rcpGroupChatBot := message.MsgGroupChatBot.RecipientUsername
 
 		switch message.Type {
 		case entity.MessageTypePrivateChat:
@@ -144,8 +145,13 @@ func (c *ChatHub) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 				case user.inbox <- message:
 				}
 			}
+		case entity.MessageTypeGroupChatBot:
+			if user.Name == rcpGroupChatBot {
+				select {
+				case user.inbox <- message:
+				}
+			}
 		}
-
 	}
 }
 
@@ -199,6 +205,7 @@ func (u *User) Receive() error {
 
 		switch msgWs.Type {
 		case entity.MessageTypePrivateChatBot:
+			// jika tipe message dari frontend adalah privateChatBot
 			resText, err := u.Chat.edenAiApi.GenerateText(msgWs.PrivateChat.Message)
 			if err != nil {
 				msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
@@ -209,6 +216,7 @@ func (u *User) Receive() error {
 			}
 			msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
 			msgWs.PrivateChat.CreatedAt = time.Now()
+			msgWs.PrivateChat.SenderUsername = "ChatBot-edenAI-GPT"
 			msgWs.PrivateChat.Message = resText
 			err = u.Write(websocket.TextMessage, msgWs)
 			if err != nil {
@@ -216,7 +224,7 @@ func (u *User) Receive() error {
 				continue
 			}
 		case entity.MessageTypePrivateChat:
-			// private chat dg user lain yang sudah ditambahkan kontaknya
+			// jika tipe message dari frontend private chat dg user lain yang sudah ditambahkan kontaknya
 			msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
 			msgWs.PrivateChat.CreatedAt = time.Now()
 			friendUsername := msgWs.PrivateChat.RecipientUsername
@@ -263,26 +271,30 @@ func (u *User) Receive() error {
 			// publish ke chat-server teman
 			u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
 		case entity.MessageTypeGroupChat:
-			msgWs.MsgGroupChat.MessageId, _ = u.Chat.idGen.GenerateId()
+			// Jika tipe message dari frontend adalah group chat
+			msgWs.MsgGroupChat.MessageId, _ = u.Chat.idGen.GenerateId() // generate message id menggunakan sonyflake
+			// mendapatkan entitas user sender dari db
 			sender, err := u.Chat.userPg.GetUserByUsername(msgWs.MsgGroupChat.SenderUsername)
 			if err != nil {
 				msgWs.MsgGroupChat.Content = err.Error()
 				msgWs.PrivateChat.CreatedAt = time.Now()
-				err = u.Write(websocket.TextMessage, msgWs)
+				u.Write(websocket.TextMessage, msgWs)
 				continue
 			}
+			// mendapatkan entitas group dari db
 			groupDb, err := u.Chat.gpRepo.GetGroupByName(msgWs.MsgGroupChat.GroupName, sender.Id)
 			if err != nil {
 				msgWs.MsgGroupChat.Content = err.Error()
 				msgWs.PrivateChat.CreatedAt = time.Now()
-				err = u.Write(websocket.TextMessage, msgWs)
+				u.Write(websocket.TextMessage, msgWs)
 				continue
 			}
+			// mendapatkan groupchat members
 			group, err := u.Chat.gpRepo.GetGroupMembers(groupDb.Id, sender.Id)
 			if err != nil {
 				msgWs.MsgGroupChat.Content = err.Error()
 				msgWs.PrivateChat.CreatedAt = time.Now()
-				err = u.Write(websocket.TextMessage, msgWs)
+				u.Write(websocket.TextMessage, msgWs)
 				continue
 			}
 
@@ -292,8 +304,10 @@ func (u *User) Receive() error {
 				UserId:    sender.Id,
 				Content:   msgWs.MsgGroupChat.Content,
 			}
+			// inser chat ke table groupchat
 			u.Chat.gcRepo.InsertNewChat(gcMessageDb)
 
+			// fanout message ke semua member group chat
 			groupMembers := group.Members
 			for _, memberId := range groupMembers {
 				friend, _ := u.Chat.userPg.GetUserById(memberId)
@@ -312,6 +326,75 @@ func (u *User) Receive() error {
 				// publish ke chat-server teman
 				u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
 			}
+
+		case entity.MessageTypeGroupChatBot:
+			msgWs.MsgGroupChatBot.MessageId, _ = u.Chat.idGen.GenerateId() // generate message id menggunakan sonyflake
+			msgWs.MsgGroupChatBot.CreatedAt = time.Now()
+			resTextChatBot, err := u.Chat.edenAiApi.GenerateText(msgWs.MsgGroupChatBot.Content)
+			if err != nil {
+				err = u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
+			sender, err := u.Chat.userPg.GetUserByUsername(msgWs.MsgGroupChatBot.SenderUsername)
+			if err != nil {
+				msgWs.MsgGroupChatBot.Content = err.Error()
+				u.Write(websocket.TextMessage, msgWs)
+			}
+			groupDb, err := u.Chat.gpRepo.GetGroupByName(msgWs.MsgGroupChatBot.GroupName, sender.Id)
+			if err != nil {
+				msgWs.MsgGroupChatBot.Content = err.Error()
+				u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
+			group, err := u.Chat.gpRepo.GetGroupMembers(groupDb.Id, sender.Id)
+			if err != nil {
+				msgWs.MsgGroupChatBot.Content = err.Error()
+				u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
+
+			// insert message prompt dari user
+			gcMessageDb := entity.GroupChatMessage{
+				GroupId:   groupDb.Id,
+				MessageId: msgWs.MsgGroupChatBot.MessageId,
+				UserId:    sender.Id,
+				Content:   msgWs.MsgGroupChatBot.Content,
+			}
+			u.Chat.gcRepo.InsertNewChat(gcMessageDb)
+
+			// insert message jawaban chatbot
+			newMsgId, _ := u.Chat.idGen.GenerateId()
+			gcMessageDb = entity.GroupChatMessage{
+				GroupId:   groupDb.Id,
+				MessageId: newMsgId,
+				UserId:    sender.Id,
+				Content:   resTextChatBot,
+			}
+			u.Chat.gcRepo.InsertNewChat(gcMessageDb)
+
+			//	fanout messsage ke semua member group
+			groupMembers := group.Members
+			msgWs.MsgGroupChatBot.SenderUsername = "ChatBot-edenAI-GPT"
+			msgWs.MsgGroupChatBot.Content = resTextChatBot
+			u.Write(websocket.TextMessage, msgWs)
+			for _, memberId := range groupMembers {
+				friend, _ := u.Chat.userPg.GetUserById(memberId)
+				isFriendInSameServer, friendServerLocation := u.Chat.isFriendInSameServer(memberId.String())
+				msgWs.MsgGroupChatBot.RecipientUsername = friend.Username
+				if friend.Username == msgWs.MsgGroupChatBot.SenderUsername {
+					continue
+				}
+				if isFriendInSameServer == true {
+					// Jika friend/recipient message berada di chat-server yg sama dg chat-server user
+					u.Chat.broadcast <- msgWs
+					continue
+				}
+
+				// jika teman user berada di server yg berbeda dg server user sender
+				// publish ke chat-server teman
+				u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
+			}
+
 		}
 	}
 	return nil

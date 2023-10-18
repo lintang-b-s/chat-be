@@ -830,6 +830,77 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "get Group Chat by groupName",
+					"request": {
+						"auth": {
+							"type": "oauth2",
+							"oauth2": [
+								{
+									"key": "accessTokenUrl",
+									"value": "http://keycloak:8080/realms/spring-boot-microservices-realm/protocol/openid-connect/token",
+									"type": "string"
+								},
+								{
+									"key": "clientSecret",
+									"value": "OlLIrucXOXgDap2kcGPiCvJzXgekWWuw",
+									"type": "string"
+								},
+								{
+									"key": "scope",
+									"value": "openid offline_access",
+									"type": "string"
+								},
+								{
+									"key": "clientId",
+									"value": "spring-cloud-client",
+									"type": "string"
+								},
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "string"
+								},
+								{
+									"key": "authUrl",
+									"value": "http://localhost:5005/auth/login",
+									"type": "string"
+								},
+								{
+									"key": "tokenName",
+									"value": "token",
+									"type": "string"
+								},
+								{
+									"key": "addTokenTo",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8080/v1/messages/group?groupName=KOMD",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"v1",
+								"messages",
+								"group"
+							],
+							"query": [
+								{
+									"key": "groupName",
+									"value": "KOMD"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},

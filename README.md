@@ -31,7 +31,7 @@ untuk mendapatkan messages yang diurutkan berdasarkan time (dari paling lama -> 
 
 ## API docs
 ada di docs/swagger.yaml <br/> <br/>
-postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
+postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 & jalankan di postman dekstop karena localhost
 
 ## Quick Start
 
@@ -113,7 +113,7 @@ postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa87
     make run
 ```
 
-12. jalankan request postman collection yg lengkap & ada websocket di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 atau  import postman collection di docs/pelatihan umum(chat app)postman_collection.json (tapi tidak lengkap & tidak ada websocket) & jalankan request di postman 
+12. jalankan request postman collection yg lengkap & ada websocket di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 & jalankan di postman dekstop karena localhost atau  import postman collection di docs/pelatihan umum(chat app)postman_collection.json (tapi tidak lengkap & tidak ada websocket) & jalankan request di postman 
 
 13. buka collection https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
  & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
