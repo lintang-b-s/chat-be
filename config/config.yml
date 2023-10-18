@@ -1,5 +1,5 @@
 app:
-  name: 'go-clean-template'
+  name: 'go-chat-api'
   version: '1.0.0'
 
 http:
@@ -7,7 +7,7 @@ http:
 
 logger:
   log_level: 'debug'
-  rollbar_env: 'go-clean-template'
+  rollbar_env: 'go-chat-api'
 
 postgres:
   pool_max: 2
@@ -18,6 +18,6 @@ postgres:
 
 redis:
   server_address: ':6379'
-  host: chat-redispkg
-  address: 6379
-  password: passwordRedis
+  host: chat-redispkg #gak guna
+  address: 6379 #gak guna
+  password: passwordRedis #gak guna

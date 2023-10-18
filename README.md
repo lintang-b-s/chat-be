@@ -1,5 +1,25 @@
 # chat-be
- chat backend api using websocket, redis, and postgres.
+ highly scalable chat backend api using websocket, redis, and postgres.
+ <br/> <br/>
+ fitur: 
+```
+ 1. autentikasi (login, register, logout, renewAccToken)
+ 2. add user to contact & get user contact
+ 3. private chat dg chatbot
+ 4. private_chat dg user lain yang sudah ditambahkan ke contact
+ 5. create group chat , add member to group chat, remove member from group chat
+ 6. group chat dg user yg sudah ditambahkan sebagai member groupchat
+ 7. memanggil chatbot di groupchat 
+ 8. mendapatkan semua message private chat & message private by friend
+ 9. mendapatkan semua message di groupchat
+ 10. Meski user terhubung ke chat-server yang berbeda-beda , mereka tetap akan bisa berkomunikasi karena adanya redis pub-sub 
+```
+
+## Content
+- [General System Design Part 1](##1-on-1-chat-flow-(userA-dan-userB-terhubung-ke-instan-chat-server-yang-sama))
+- [Quick Start / Cara menjalankan Aplikasi](##quick-start)
+- [General System Design Part 2](##online-presence)
+
 
 ## ChatHub struct & User struct
 ![ChatHub struct & User Struct](https://res.cloudinary.com/dex4u3rw4/image/upload/v1697371903/ChatHubdanUser_vjzyku.png)
@@ -101,21 +121,22 @@ postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa87
     migrate -database "postgres://postgres:pass@localhost:5432/chat?sslmode=disable" -path migrations up
 ```
 
-9. buat file .env dan isi sesuai .env.example
+9. buat file .env dan isi sesuai .env.example & buat akun https://www.edenai.co/ & copy EDENAPI_KEY ke .env dg key "EDENAI_APIKEY"
+10. ubah config.yml sesuai addr,username, password postgres dan redis anda
 
-10. membuat dokumentasi swaggger
+11. membuat dokumentasi swaggger
 ```
     make swag-v1
 ```
 
-11. menjalankan aplikasi
+12. menjalankan aplikasi
 ```
     make run
 ```
 
-12. jalankan request postman collection yg lengkap & ada websocket di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 & jalankan di postman dekstop karena localhost atau  import postman collection di docs/pelatihan umum(chat app)postman_collection.json (tapi tidak lengkap & tidak ada websocket) & jalankan request di postman 
+13. jalankan request postman collection yg lengkap & ada websocket di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 & jalankan di postman dekstop karena localhost atau  import postman collection di docs/pelatihan umum(chat app)postman_collection.json (tapi tidak lengkap & tidak ada websocket) & jalankan request di postman 
 
-13. buka collection https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
+14. buka collection https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
  & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
 ```
     jalankan request websocket di link postman tsb
