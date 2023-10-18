@@ -31,7 +31,7 @@ untuk mendapatkan messages yang diurutkan berdasarkan time (dari paling lama -> 
 
 ## API docs
 ada di docs/swagger.yaml <br/> <br/>
-postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 & jalankan di postman dekstop karena localhost
+postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 & jalankan di postman dekstop karena localhost ( setiap koneksi websocket harus menggunakan otp / harus login lagi)
 
 ## Quick Start
 
@@ -119,6 +119,7 @@ postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa87
  & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
 ```
     jalankan request websocket di link postman tsb
+    setiap koneksi websocket harus menggunakan otp (harus login lagi)
 ```
 
 
