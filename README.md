@@ -16,7 +16,8 @@
 ```
 
 ## Content
-- [General System Design Part 1](#1-on-1-chat-flow-(userA-dan-userB-terhubung-ke-instan-chat-server-yang-sama))
+- [General System Design Part 1](##1-on-1-chat-flow-usera-dan-userb-terhubung-ke-instan-chat-server-yang-sama)
+- [API Docs](#api-docs)
 - [Quick Start / Cara menjalankan Aplikasi](#quick-start)
 - [General System Design Part 2](#online-presence)
 
