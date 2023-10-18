@@ -31,7 +31,7 @@ func (r *PrivateChatRepo) InsertPrivateChat(e entity.InsertPrivateChatRequest) (
 
 	msg := PrivateChat{Id: e.MessageId, MessageFrom: e.MessageFrom, MessageTo: e.MessageTo, Content: e.Content}
 	if result := r.db.Create(&msg); result.Error != nil {
-		return entity.PrivateChatMessage{}, fmt.Errorf("PrivateChatRepo -  InsertPrivateChat - r.db.Create", result.Error)
+		return entity.PrivateChatMessage{}, fmt.Errorf("PrivateChatRepo -  InsertPrivateChat - r.db.Create: %w", result.Error)
 	}
 
 	res := entity.PrivateChatMessage{
@@ -49,12 +49,11 @@ func (r *PrivateChatRepo) InsertPrivateChat(e entity.InsertPrivateChatRequest) (
 // GetPrivateChatByUser get private chat by userId , bisa receiver & sender
 func (r *PrivateChatRepo) GetPrivateChatByUser(e entity.GetPrivateChatQueryByUserRequest) (entity.PrivateChatUsers, error) {
 	var msgs []PrivateChat
-	//var satuMsg PrivateChat
 
 	userId := e.UserId
 	//
 	if result := r.db.Where(&PrivateChat{MessageFrom: userId}).Or(&PrivateChat{MessageTo: userId}).Find(&msgs); result.Error != nil {
-		return entity.PrivateChatUsers{}, fmt.Errorf("PrivateChatRepo - GetPrivateChatByUser -  r.db.Where: %w", result.Error)
+		return entity.PrivateChatUsers{}, fmt.Errorf("PrivateChatRepo - GetPrivateChatByUser -  r.db.Where(&PrivateChat{MessageFrom: userId}).Or(&PrivateChat{MessageTo: userId}).Find(&msgs): %w", result.Error)
 	}
 
 	pc := entity.PrivateChatUsers{
@@ -94,5 +93,30 @@ func (r *PrivateChatRepo) GetPrivateChatByUser(e entity.GetPrivateChatQueryByUse
 	}
 
 	return pc, nil
+}
 
+func (r *PrivateChatRepo) GetPrivateChatBySenderAndReceiver(e entity.GetPCQueryBySdrAndRcvrRequest) (entity.PrivateChats, error) {
+	var msgs []PrivateChat
+
+	//
+	if result := r.db.Where(&PrivateChat{MessageFrom: e.SenderId, MessageTo: e.ReceiverId}).Or(&PrivateChat{MessageFrom: e.ReceiverId, MessageTo: e.SenderId}).Find(&msgs); result.Error != nil {
+		return entity.PrivateChats{}, fmt.Errorf("PrivateChatRepo - GetPrivateChatBySenderAndReceiver -  r.db.Where: %w", result.Error)
+	}
+
+	var pcs entity.PrivateChats
+	var arrPcs []entity.PrivateChatMessage
+	for _, msg := range msgs {
+		newPcMessage := entity.PrivateChatMessage{
+			MessageId:   msg.Id,
+			MessageFrom: msg.MessageFrom,
+			MessageTo:   msg.MessageTo,
+			Content:     msg.Content,
+			CreatedAt:   msg.CreatedAt,
+			UpdatedAt:   msg.UpdatedAt,
+			DeletedAt:   msg.UpdatedAt,
+		}
+		arrPcs = append(arrPcs, newPcMessage)
+	}
+	pcs.Messages = arrPcs
+	return pcs, nil
 }

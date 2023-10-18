@@ -15,83 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/translation/do-translate": {
-            "post": {
-                "description": "Translate a text",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "translation"
-                ],
-                "summary": "Translate",
-                "operationId": "do-translate",
-                "parameters": [
-                    {
-                        "description": "Set up translation",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/v1.doTranslateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/entity.Translation"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/v1.response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/v1.response"
-                        }
-                    }
-                }
-            }
-        },
-        "/translation/history": {
-            "get": {
-                "description": "Show all translation history",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "translation"
-                ],
-                "summary": "Show history",
-                "operationId": "history",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/v1.historyResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/v1.response"
-                        }
-                    }
-                }
-            }
-        },
         "/v1/auth/login": {
             "post": {
                 "description": "Login User",
@@ -188,7 +111,7 @@ const docTemplate = `{
         },
         "/v1/auth/token": {
             "post": {
-                "description": "renew Access Token using user refreshToken",
+                "description": "delete refresh token \u0026 fanout offline status ke semua kontak milik user",
                 "consumes": [
                     "application/json"
                 ],
@@ -198,8 +121,8 @@ const docTemplate = `{
                 "tags": [
                     "user"
                 ],
-                "summary": "renew Access Token using user refreshToken",
-                "operationId": "renewAccessToken",
+                "summary": "delete refresh token \u0026 fanout offline status ke semua kontak milik user",
+                "operationId": "deleteRefreshToken",
                 "parameters": [
                     {
                         "description": "Login  user",
@@ -207,7 +130,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.renewAccessTokenRequest"
+                            "$ref": "#/definitions/v1.deleteRefreshTokenRequest"
                         }
                     }
                 ],
@@ -215,7 +138,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.renewAccessTokenResponse"
+                            "$ref": "#/definitions/v1.deleteRefreshTokenResponse"
                         }
                     },
                     "400": {
@@ -233,11 +156,11 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/contact/add": {
+        "/v1/contact": {
             "get": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "OAuth2Application": []
                     }
                 ],
                 "description": "Get User Contact",
@@ -248,7 +171,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "contact"
                 ],
                 "summary": "Get  User Contact",
                 "operationId": "getContact",
@@ -272,11 +195,13 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/v1/contact/add": {
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "OAuth2Application": []
                     }
                 ],
                 "description": "Add Contact",
@@ -287,7 +212,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "user"
+                    "contact"
                 ],
                 "summary": "Add Contact",
                 "operationId": "addContact",
@@ -323,34 +248,287 @@ const docTemplate = `{
                     }
                 }
             }
-        }
-    },
-    "definitions": {
-        "entity.Translation": {
-            "type": "object",
-            "properties": {
-                "destination": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "original": {
-                    "type": "string",
-                    "example": "текст для перевода"
-                },
-                "source": {
-                    "type": "string",
-                    "example": "auto"
-                },
-                "translation": {
-                    "type": "string",
-                    "example": "text for translation"
+        },
+        "/v1/groups": {
+            "post": {
+                "security": [
+                    {
+                        "OAuth2Application": []
+                    }
+                ],
+                "description": "create new group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "create new group",
+                "operationId": "createNewgroup",
+                "parameters": [
+                    {
+                        "description": "set up new group",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.createGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.groupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
                 }
             }
         },
+        "/v1/groups/add": {
+            "put": {
+                "security": [
+                    {
+                        "OAuth2Application": []
+                    }
+                ],
+                "description": "add new group member",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "add new group member",
+                "operationId": "addNewGroupMember",
+                "parameters": [
+                    {
+                        "description": "set up new group",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.addNewGroupMemberRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.groupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/groups/remove": {
+            "put": {
+                "security": [
+                    {
+                        "OAuth2Application": []
+                    }
+                ],
+                "description": "remove group member",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "remove group member",
+                "operationId": "removeGroupMember",
+                "parameters": [
+                    {
+                        "description": "set up removeGroupMember",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.removeGroupMember"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.groupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/messages": {
+            "get": {
+                "security": [
+                    {
+                        "OAuth2Application": []
+                    }
+                ],
+                "description": "Get user messages",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Get user messages",
+                "operationId": "getMessages",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.privateChatUsersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/messages/friend": {
+            "get": {
+                "security": [
+                    {
+                        "OAuth2Application": []
+                    }
+                ],
+                "description": "Get user messages by friend",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Get user messages by friend",
+                "operationId": "getMessagesByFriend",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "friendName search by friendUsername",
+                        "name": "friendUsername",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.getMessagesByFriendRespone"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
         "v1.addFriendRequest": {
             "type": "object",
             "properties": {
                 "friend_username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.addNewGroupMemberRequest": {
+            "type": "object",
+            "properties": {
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.createGroupRequest": {
+            "type": "object",
+            "properties": {
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -375,27 +553,11 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.doTranslateRequest": {
-            "type": "object",
-            "required": [
-                "destination",
-                "original",
-                "source"
-            ],
-            "properties": {
-                "destination": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "original": {
-                    "type": "string",
-                    "example": "текст для перевода"
-                },
-                "source": {
-                    "type": "string",
-                    "example": "auto"
-                }
-            }
+        "v1.deleteRefreshTokenRequest": {
+            "type": "object"
+        },
+        "v1.deleteRefreshTokenResponse": {
+            "type": "object"
         },
         "v1.getContactResponse": {
             "type": "object",
@@ -408,14 +570,31 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.historyResponse": {
+        "v1.getMessagesByFriendRespone": {
             "type": "object",
             "properties": {
-                "history": {
+                "message": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entity.Translation"
+                        "$ref": "#/definitions/v1.privateChatMessage"
                     }
+                }
+            }
+        },
+        "v1.groupResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
                 }
             }
         },
@@ -458,6 +637,60 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/v1.userResponse"
+                }
+            }
+        },
+        "v1.privateChatMessage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "message_from": {
+                    "type": "string"
+                },
+                "message_id": {
+                    "type": "integer"
+                },
+                "message_to": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.privateChatUsersResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.privateChatMessage"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "v1.removeGroupMember": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "userto_remove": {
+                    "type": "string"
                 }
             }
         },
@@ -515,8 +748,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/v1",
 	Schemes:          []string{},
-	Title:            "Go Chat API",
-	Description:      "Chat APi using redis & postgres",
+	Title:            "Go Clean Template API",
+	Description:      "Using a translation service as an example",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

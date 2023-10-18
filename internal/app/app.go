@@ -90,12 +90,18 @@ func Run(cfg *config.Config) {
 		repo.NewUserRepo(gorm.Pool),
 	)
 
+	//groupUseCase
+	groupUseCase := usecase.NewGroupUseCase(
+		repo.NewGroupRepo(gorm.Pool),
+		repo.NewUserRepo(gorm.Pool),
+	)
+
 	// HTTP Server
 	handler := gin.New()
 
 	handler.Use(cors.Default())
 
-	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, contactUseCase, jwtTokenMaker, messageUseCase)
+	v1.NewRouter(handler, l, authUseCase, webSocketUseCase, contactUseCase, jwtTokenMaker, messageUseCase, groupUseCase)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
 	// start subscriber channel chat-server-serverName

@@ -1,6 +1,8 @@
 package webapi
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -11,6 +13,10 @@ type EdenAIAPI struct {
 	apiKey string
 }
 
+var (
+	ErrorRequest = errors.New("error when request to edenAI API")
+)
+
 // New -.
 func NewEdenAIAPI(apiKey string) *EdenAIAPI {
 	return &EdenAIAPI{
@@ -18,12 +24,15 @@ func NewEdenAIAPI(apiKey string) *EdenAIAPI {
 	}
 }
 
-func (api *EdenAIAPI) GenerateText(text string) string {
+func (api *EdenAIAPI) GenerateText(text string) (string, error) {
 	url := "https://api.edenai.run/v2/text/generation"
 
 	payload := strings.NewReader("{\"response_as_dict\":true,\"attributes_as_list\":false,\"show_original_response\":false,\"temperature\":0,\"max_tokens\":1000,\"providers\":\"ai21labs\",\"text\":" + "\"" + text + "\"" + "}")
 
-	req, _ := http.NewRequest("POST", url, payload)
+	req, err := http.NewRequest("POST", url, payload)
+	if err != nil {
+		return "", fmt.Errorf("http.NewREquest: %w", ErrorRequest)
+	}
 
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("content-type", "application/json")
@@ -36,5 +45,5 @@ func (api *EdenAIAPI) GenerateText(text string) string {
 
 	resText := string(body)
 
-	return resText
+	return resText, nil
 }

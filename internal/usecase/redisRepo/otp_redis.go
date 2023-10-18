@@ -3,6 +3,7 @@ package redisRepo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
 	"math/rand"
 	"time"
@@ -25,16 +26,16 @@ func (r *OtpRepo) GetOtp(otp string, ctx context.Context, username string) error
 	res := r.rds.Client.HGet(ctx, "otp", otp)
 	err := res.Err()
 	if err != nil {
-		return err
+		return fmt.Errorf("OtpRepo - GetOTP - r.rds.Client.HGet(ctx, \"otp\", otp): %w", err)
 	}
 
 	if res.Val() != username {
-		return OTPNotMatchError
+		return fmt.Errorf("OtpRepo - GetOTP - res.Val() != username: %w", OTPNotMatchError)
 	}
 
 	err = r.rds.Client.HDel(ctx, "otp", otp).Err()
 	if err != nil {
-		return err
+		return fmt.Errorf("OtpRepo - GetOTP - r.rds.Client.HDel(ctx, \"otp\", otp).Err(): %w", err)
 	}
 
 	return nil
@@ -49,7 +50,7 @@ func (r *OtpRepo) CreateOtp(ctx context.Context, username string) (string, error
 
 	err := r.rds.Client.HSet(ctx, "otp", otp, username).Err()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("OtpRepo - CreateOtp - r.rds.Client.HSet(ctx, \"otp\", otp, username).Err(): %w", err)
 	}
 	return otp, nil
 }

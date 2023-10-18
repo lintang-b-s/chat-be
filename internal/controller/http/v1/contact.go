@@ -36,10 +36,10 @@ type addFriendRequest struct {
 // @Summary     Add Contact
 // @Description    Add Contact
 // @ID          addContact
-// @Tags  	    user
+// @Tags  	    contact
 // @Accept      json
 // @Produce     json
-// @Security ApiKeyAuth
+// @Security OAuth2Application
 // @Param       request body addFriendRequest true "set up addFriendRequest"
 // @Success     200 {object} userResponse
 // @Failure     400 {object} response
@@ -66,13 +66,14 @@ func (r *contactRoutes) addContact(c *gin.Context) {
 
 	if err != nil {
 		unwrapedErr := errors.Unwrap(err)
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+		errRepo := errors.Unwrap(unwrapedErr)
+		if errRepo == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+errRepo.Error())
 			return
 		}
 
-		if unwrapedErr == repo.AlreadyYourInYourContactErr {
-			ErrorResponse(c, http.StatusBadRequest, " Bad Request : "+unwrapedErr.Error())
+		if errRepo == repo.AlreadyYourInYourContactErr {
+			ErrorResponse(c, http.StatusBadRequest, " Bad Request : "+errRepo.Error())
 			return
 		}
 
@@ -97,14 +98,14 @@ type getContactResponse struct {
 // @Summary     Get  User Contact
 // @Description    Get User Contact
 // @ID          getContact
-// @Tags  	    user
+// @Tags  	    contact
 // @Accept      json
 // @Produce     json
-// @Security ApiKeyAuth
+// @Security OAuth2Application
 // @Success     200 {object} getContactResponse
 // @Failure     400 {object} response
 // @Failure     500 {object} response
-// @Router      /v1/contact/add [GET]
+// @Router      /v1/contact [GET]
 // Author: https://github.com/lintang-b-s
 func (r *contactRoutes) getContact(c *gin.Context) {
 	authPayload := c.MustGet(api.AuthorizationPayloadKey).(*jwt.Payload)
@@ -118,8 +119,9 @@ func (r *contactRoutes) getContact(c *gin.Context) {
 
 	if err != nil {
 		unwrapedErr := errors.Unwrap(err)
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+		errRepo := errors.Unwrap(unwrapedErr)
+		if errRepo == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+errRepo.Error())
 			return
 		}
 

@@ -15,7 +15,7 @@ type UserRepo struct {
 }
 
 var (
-	ErrNotFoundContactErr       = errors.New("Not Found Contacts")
+	ErrNotFoundContactErr       = errors.New(" user Not in your Contacts")
 	AlreadyYourInYourContactErr = errors.New("Already in your contacts")
 )
 
@@ -75,7 +75,7 @@ func (r *UserRepo) GetUser(ctx context.Context, email string) (entity.GetUser, e
 	var userDb User
 	result := r.db.Where(&User{Email: email}).First(&userDb)
 	if err := result.Error; err != nil {
-		return entity.GetUser{}, err
+		return entity.GetUser{}, fmt.Errorf("UserRepo -  GetUser -  r.db.Where(&User{Email: email}).First(&userDb): %w", err)
 	}
 
 	user := entity.GetUser{
@@ -94,20 +94,20 @@ func (r *UserRepo) AddFriend(ctx context.Context, myUsername string, fUsername s
 	var friend User
 	queryResF := r.db.Where(&User{Username: fUsername}).First(&friend)
 	if err := queryResF.Error; err != nil {
-		return entity.UserResponse{}, err
+		return entity.UserResponse{}, fmt.Errorf("UserRepo -  AddFriend -  r.db.Where(&User{Username: fUsername}).First(&friend):  %w", err)
 	}
 	queryRes := r.db.Where(&User{Username: myUsername}).First(&user)
 	if err := queryRes.Error; err != nil {
-		return entity.UserResponse{}, err
+		return entity.UserResponse{}, fmt.Errorf("UserRepo -  AddFriend -  r.db.Where(&User{Username: myUsername}).First(&user):  %w", err)
 	}
 
 	var result []contact
 	queryRes = r.db.Raw("SELECT * FROM contacts WHERE user_id=? AND friend_id=? ", user.ID, friend.ID).Scan(&result)
 	if err := queryRes.Error; err != nil {
-		return entity.UserResponse{}, err
+		return entity.UserResponse{}, fmt.Errorf("UserRepo -  AddFriend - :  r.db.Raw(\"SELECT * FROM contacts WHERE user_id=? AND friend_id=? \", user.ID, friend.ID).Scan(&result): %w", err)
 	}
 	if len(result) > 0 {
-		return entity.UserResponse{}, AlreadyYourInYourContactErr
+		return entity.UserResponse{}, fmt.Errorf("UserRepo -  AddFriend - :  r.db.Raw(\"SELECT * FROM contacts WHERE user_id=? AND friend_id=? \", user.ID, friend.ID).Scan(&result): %w", AlreadyYourInYourContactErr)
 	}
 
 	user.Friends = append(user.Friends, &friend)
@@ -140,7 +140,7 @@ func (r *UserRepo) GetUserFriends(ctx context.Context, username string) (entity.
 	var user User
 	queryRes := r.db.Where(&User{Username: username}).Preload("Friends").First(&user)
 	if err := queryRes.Error; err != nil {
-		return entity.UserResponse{}, err
+		return entity.UserResponse{}, fmt.Errorf("UserRepo - GetUserFriends -  r.db.Where(&User{Username: username}).Preload(\"Friends\").First(&user): %w", err)
 	}
 
 	var friendRes []entity.UserResponse
@@ -181,7 +181,8 @@ func (r *UserRepo) GetUserFriend(ctx context.Context, myUsername string, friendU
 		return err
 	}
 	if len(result) == 0 {
-		return ErrNotFoundContactErr
+		return fmt.Errorf("userRepo - GetUserFriend - r.db.Raw(\"SELECT * FROM contacts WHERE user_id=? AND friend_id=? \", user.ID, friend.ID): %w", ErrNotFoundContactErr)
+
 	}
 
 	return nil
@@ -193,7 +194,7 @@ func (r *UserRepo) GetUserByUsername(username string) (entity.GetUser, error) {
 	var userDb User
 	result := r.db.Where(&User{Username: username}).First(&userDb)
 	if err := result.Error; err != nil {
-		return entity.GetUser{}, err
+		return entity.GetUser{}, fmt.Errorf("UserRepo - GetUserByUsername -  r.db.Where(&User{Username: username}).First(&userDb): %w", result.Error)
 	}
 
 	user := entity.GetUser{

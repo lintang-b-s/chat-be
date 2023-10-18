@@ -26,6 +26,7 @@ func NewMessageRoutes(handler *gin.RouterGroup, m usecase.Message, l logger.Inte
 	h := handler.Group("/messages").Use(api.AuthMiddleware(r.jwt))
 	{
 		h.GET("", r.getMessages)
+		h.GET("/friend", r.getMessagesByFriend)
 	}
 
 }
@@ -42,20 +43,20 @@ type privateChatMessage struct {
 }
 
 type privateChatUsersResponse struct {
-	Message map[uuid.UUID][]privateChatMessage `json:"message"`
+	Message map[string]map[uuid.UUID][]privateChatMessage `json:"message"`
 }
 
 // @Summary     Get user messages
 // @Description    Get user messages
 // @ID          getMessages
-// @Tags  	    user
+// @Tags  	    messages
 // @Accept      json
 // @Produce     json
-// @Security ApiKeyAuth
-// @Success     200 {object} getMessageResponse
+// @Security OAuth2Application
+// @Success     200 {object} privateChatUsersResponse
 // @Failure     400 {object} response
 // @Failure     500 {object} response
-// @Router      /v1/contact/add [post]
+// @Router      /v1/messages [get]
 // Author: https://github.com/lintang-b-s
 func (r *messageRoutes) getMessages(c *gin.Context) {
 	authPayload := c.MustGet(api.AuthorizationPayloadKey).(*jwt.Payload)
@@ -68,8 +69,9 @@ func (r *messageRoutes) getMessages(c *gin.Context) {
 	)
 	if err != nil {
 		unwrapedErr := errors.Unwrap(err)
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, unwrapedErr.Error())
+		errRepo := errors.Unwrap(unwrapedErr)
+		if errRepo == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, errRepo.Error())
 			return
 		}
 		r.l.Error("http - v1- getMessages")
@@ -78,7 +80,7 @@ func (r *messageRoutes) getMessages(c *gin.Context) {
 	}
 
 	res := privateChatUsersResponse{
-		Message: make(map[uuid.UUID][]privateChatMessage),
+		Message: make(map[string]map[uuid.UUID][]privateChatMessage),
 	}
 	for key, val := range msgs.Message {
 		var pcMsgs []privateChatMessage
@@ -93,9 +95,76 @@ func (r *messageRoutes) getMessages(c *gin.Context) {
 				DeletedAt:   msgVal.DeletedAt,
 			})
 		}
-		res.Message[key] = pcMsgs
+		innerMap := make(map[uuid.UUID][]privateChatMessage)
+		innerMap[key] = pcMsgs
+		res.Message["friendId"] = innerMap
 	}
 
 	c.JSON(http.StatusOK, res)
+}
 
+type getMessagesByFriendRespone struct {
+	Messages []privateChatMessage `json:"message"`
+}
+
+// @Summary     Get user messages by friend
+// @Description    Get user messages by friend
+// @ID          getMessagesByFriend
+// @Tags  	    messages
+// @Accept      json
+// @Produce     json
+// @Security OAuth2Application
+// @Param        friendUsername    query     string  false  "friendName search by friendUsername"
+// @Success     200 {object} getMessagesByFriendRespone
+// @Failure     400 {object} response
+// @Failure     500 {object} response
+// @Router      /v1/messages/friend [get]
+// Author: https://github.com/lintang-b-s
+func (r *messageRoutes) getMessagesByFriend(c *gin.Context) {
+	friendUsername := c.Query("friendUsername")
+	authPayload := c.MustGet(api.AuthorizationPayloadKey).(*jwt.Payload)
+
+	if friendUsername == "" {
+		ErrorResponse(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	msgs, err := r.m.GetMessagesByRecipient(
+		c.Request.Context(),
+		entity.GetPCBySdrAndRcvrRequest{
+			SenderUsername:   authPayload.Username,
+			ReceiverUsername: friendUsername,
+		},
+	)
+	if err != nil {
+		unwrapedErr := errors.Unwrap(err)
+		errRepo := errors.Unwrap(unwrapedErr)
+		if errRepo == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, errRepo.Error())
+			return
+		}
+		r.l.Error("http - v1- getMessages")
+		ErrorResponse(c, http.StatusInternalServerError, "getMessages service problems: "+err.Error())
+		return
+	}
+
+	var pcs []privateChatMessage
+
+	for _, msg := range msgs.Messages {
+		pcs = append(pcs, privateChatMessage{
+			MessageId:   msg.MessageId,
+			MessageFrom: msg.MessageFrom,
+			MessageTo:   msg.MessageTo,
+			Content:     msg.Content,
+			CreatedAt:   msg.CreatedAt,
+			UpdatedAt:   msg.UpdatedAt,
+			DeletedAt:   msg.DeletedAt,
+		})
+	}
+
+	res := getMessagesByFriendRespone{
+		Messages: pcs,
+	}
+
+	c.JSON(http.StatusOK, res)
 }

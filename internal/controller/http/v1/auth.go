@@ -77,7 +77,8 @@ func (r *authRoutes) registerUser(c *gin.Context) {
 	if err != nil {
 
 		errorM := errors.Unwrap(err)
-		if errorM.Error() == "AuthRepo - Createuser - r.db.Where: User With same username or email already exists" {
+		errM := errors.Unwrap(err)
+		if errM.Error() == "AuthRepo - Createuser - r.db.Where: User With same username or email already exists" {
 			ErrorResponse(c, http.StatusBadRequest, "Bad request:  User With same username or email already exists")
 			return
 		}
@@ -139,13 +140,14 @@ func (r *authRoutes) loginUser(c *gin.Context) {
 	if err != nil {
 
 		unwrapedErr := errors.Unwrap(err)
+		errM := errors.Unwrap(unwrapedErr)
 		if unwrapedErr == bcrypt.ErrMismatchedHashAndPassword {
 			ErrorResponse(c, http.StatusUnauthorized, "Wrong password")
 			return
 		}
 
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+		if errM == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+errM.Error())
 			return
 		}
 
@@ -210,13 +212,14 @@ func (r *authRoutes) renewAccessToken(c *gin.Context) {
 
 		unwrapedErr := errors.Unwrap(err)
 		// jika refresh token invalid / expired
+		errRepo := errors.Unwrap(unwrapedErr)
 		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
 			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
 			return
 		}
 		// jika row pada db tidak ditemukan
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+		if errRepo == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+errRepo.Error())
 			return
 		}
 
@@ -275,14 +278,15 @@ func (r *authRoutes) deleteRefreshToken(c *gin.Context) {
 	)
 	if err != nil {
 		unwrapedErr := errors.Unwrap(err)
+		errRepo := errors.Unwrap(unwrapedErr)
 		// jika refresh token invalid / expired
 		if unwrapedErr == jwt.ErrInvalidToken || unwrapedErr == jwt.ErrExpiredToken {
 			ErrorResponse(c, http.StatusUnauthorized, "Token invalid or token already expired")
 			return
 		}
 		// jika row pada db tidak ditemukan
-		if unwrapedErr == gorm.ErrRecordNotFound {
-			ErrorResponse(c, http.StatusBadRequest, "User not found: "+unwrapedErr.Error())
+		if errRepo == gorm.ErrRecordNotFound {
+			ErrorResponse(c, http.StatusBadRequest, "User not found: "+errRepo.Error())
 			return
 		}
 

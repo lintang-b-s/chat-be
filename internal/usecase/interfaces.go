@@ -76,7 +76,7 @@ type (
 
 	// EdenAiApi
 	EdenAiApi interface {
-		GenerateText(string) string
+		GenerateText(string) (string, error)
 	}
 
 	Contact interface {
@@ -102,10 +102,25 @@ type (
 	PrivateChatRepo interface {
 		InsertPrivateChat(entity.InsertPrivateChatRequest) (entity.PrivateChatMessage, error)
 		GetPrivateChatByUser(entity.GetPrivateChatQueryByUserRequest) (entity.PrivateChatUsers, error)
+		GetPrivateChatBySenderAndReceiver(entity.GetPCQueryBySdrAndRcvrRequest) (entity.PrivateChats, error)
 	}
 
 	//
 	Message interface {
 		GetMessageByUserLogin(context.Context, entity.GetPrivateChatByUserRequest) (entity.PrivateChatUsers, error)
+		GetMessagesByRecipient(context.Context, entity.GetPCBySdrAndRcvrRequest) (entity.PrivateChats, error)
+	}
+
+	// Repository for group
+	GroupRepo interface {
+		CreateGroup(context.Context, entity.CreateGroupRequest) (entity.Group, error)
+		AddNewGroupMember(context.Context, entity.AddNewGroupMemberReq) (entity.Group, error)
+		RemoveMember(context.Context, entity.RemoveGroupMemberReq) (entity.Group, error)
+	}
+
+	Group interface {
+		CreateGroup(context.Context, entity.CreateGroupReqUc) (entity.Group, error)
+		AddNewGroupMember(context.Context, entity.AddNewGroupMemberReqUc) (entity.Group, error)
+		RemoveGroupMember(context.Context, entity.RemoveGroupMemberReqUc) (entity.Group, error)
 	}
 )

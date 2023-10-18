@@ -42,10 +42,20 @@ ALTER TABLE private_chats ADD CONSTRAINT fk_private_chats_users_to FOREIGN KEY (
     REFERENCES users (id);
 
 
+CREATE TABLE groups(
+                       id uuid NOT NULL UNIQUE ,
+                       name varchar(255) NOT NULL ,
+                       created_at timestamptz NOT NULL DEFAULT (now()),
+                       updated_at timestamptz NOT NULL DEFAULT (now()),
+                       deleted_at timestamptz
+
+);
+
+
 CREATE TABLE group_chats (
-                             id bigint  NOT NULL,
-                             message_id uuid NOT NULL,
-                             user_id bigint NOT NULL,
+                             id uuid  NOT NULL  ,
+                             message_id bigint NOT NULL ,
+                             user_id uuid NOT NULL,
                              content text NOT NULL ,
                              created_at timestamptz NOT NULL DEFAULT (now()),
                              updated_at timestamptz NOT NULL DEFAULT (now()),
@@ -55,8 +65,12 @@ CREATE TABLE group_chats (
 ALTER TABLE ONLY  group_chats ADD CONSTRAINT "ID_PKEY" PRIMARY KEY (id,message_id);
 
 
-ALTER TABLE group_chats ADD CONSTRAINT fk_group_chats_users_from FOREIGN KEY (message_id)
+ALTER TABLE group_chats ADD CONSTRAINT fk_group_chats_users_from FOREIGN KEY (user_id)
     REFERENCES users (id);
+
+ALTER TABLE group_chats ADD CONSTRAINT  fk_group_chats_groups FOREIGN KEY (id)
+    REFERENCES groups(id);
+
 
 
 -- Contact Table
@@ -74,4 +88,18 @@ ALTER TABLE contacts ADD CONSTRAINT fk_contacts_users_one FOREIGN KEY (user_id)
 
 ALTER TABLE contacts ADD CONSTRAINT fk_contacts_users_two FOREIGN KEY (friend_id)
     REFERENCES users (id);
+
+
+CREATE TABLE users_group (
+                             id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4 (),
+                             user_id uuid NOT NULL,
+                             group_id uuid NOT NULL,
+                             created_at timestamptz NOT NULL DEFAULT (now()),
+                             updated_at timestamptz NOT NULL DEFAULT (now()),
+                             deleted_at timestamptz
+);
+
+ALTER TABLE users_group ADD CONSTRAINT fk_users_group_group_id FOREIGN KEY (group_id)
+    REFERENCES groups(id);
+
 

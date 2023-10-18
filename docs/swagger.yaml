@@ -1,23 +1,26 @@
 basePath: /v1
 definitions:
-  entity.Translation:
-    properties:
-      destination:
-        example: en
-        type: string
-      original:
-        example: текст для перевода
-        type: string
-      source:
-        example: auto
-        type: string
-      translation:
-        example: text for translation
-        type: string
-    type: object
   v1.addFriendRequest:
     properties:
       friend_username:
+        type: string
+    type: object
+  v1.addNewGroupMemberRequest:
+    properties:
+      members:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    type: object
+  v1.createGroupRequest:
+    properties:
+      members:
+        items:
+          type: string
+        type: array
+      name:
         type: string
     type: object
   v1.createUserRequest:
@@ -34,21 +37,9 @@ definitions:
     - password
     - username
     type: object
-  v1.doTranslateRequest:
-    properties:
-      destination:
-        example: en
-        type: string
-      original:
-        example: текст для перевода
-        type: string
-      source:
-        example: auto
-        type: string
-    required:
-    - destination
-    - original
-    - source
+  v1.deleteRefreshTokenRequest:
+    type: object
+  v1.deleteRefreshTokenResponse:
     type: object
   v1.getContactResponse:
     properties:
@@ -57,12 +48,23 @@ definitions:
           $ref: '#/definitions/v1.userResponse'
         type: array
     type: object
-  v1.historyResponse:
+  v1.getMessagesByFriendRespone:
     properties:
-      history:
+      message:
         items:
-          $ref: '#/definitions/entity.Translation'
+          $ref: '#/definitions/v1.privateChatMessage'
         type: array
+    type: object
+  v1.groupResponse:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
     type: object
   v1.loginUserRequest:
     properties:
@@ -91,6 +93,41 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/v1.userResponse'
+    type: object
+  v1.privateChatMessage:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      message_from:
+        type: string
+      message_id:
+        type: integer
+      message_to:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  v1.privateChatUsersResponse:
+    properties:
+      message:
+        additionalProperties:
+          additionalProperties:
+            items:
+              $ref: '#/definitions/v1.privateChatMessage'
+            type: array
+          type: object
+        type: object
+    type: object
+  v1.removeGroupMember:
+    properties:
+      name:
+        type: string
+      userto_remove:
+        type: string
     type: object
   v1.renewAccessTokenRequest:
     properties:
@@ -128,57 +165,6 @@ info:
   title: Go Clean Template API
   version: "1.0"
 paths:
-  /translation/do-translate:
-    post:
-      consumes:
-      - application/json
-      description: Translate a text
-      operationId: do-translate
-      parameters:
-      - description: Set up translation
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/v1.doTranslateRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/entity.Translation'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/v1.response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/v1.response'
-      summary: Translate
-      tags:
-      - translation
-  /translation/history:
-    get:
-      consumes:
-      - application/json
-      description: Show all translation history
-      operationId: history
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.historyResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/v1.response'
-      summary: Show history
-      tags:
-      - translation
   /v1/auth/login:
     post:
       consumes:
@@ -245,22 +231,23 @@ paths:
     post:
       consumes:
       - application/json
-      description: renew Access Token using user refreshToken
-      operationId: renewAccessToken
+      description: delete refresh token & fanout offline status ke semua kontak milik
+        user
+      operationId: deleteRefreshToken
       parameters:
       - description: Login  user
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.renewAccessTokenRequest'
+          $ref: '#/definitions/v1.deleteRefreshTokenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.renewAccessTokenResponse'
+            $ref: '#/definitions/v1.deleteRefreshTokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -269,10 +256,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/v1.response'
-      summary: renew Access Token using user refreshToken
+      summary: delete refresh token & fanout offline status ke semua kontak milik
+        user
       tags:
       - user
-  /v1/contact/add:
+  /v1/contact:
     get:
       consumes:
       - application/json
@@ -294,10 +282,11 @@ paths:
           schema:
             $ref: '#/definitions/v1.response'
       security:
-      - ApiKeyAuth: []
+      - OAuth2Application: []
       summary: Get  User Contact
       tags:
-      - user
+      - contact
+  /v1/contact/add:
     post:
       consumes:
       - application/json
@@ -326,8 +315,164 @@ paths:
           schema:
             $ref: '#/definitions/v1.response'
       security:
-      - ApiKeyAuth: []
+      - OAuth2Application: []
       summary: Add Contact
       tags:
-      - user
+      - contact
+  /v1/groups:
+    post:
+      consumes:
+      - application/json
+      description: create new group
+      operationId: createNewgroup
+      parameters:
+      - description: set up new group
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.createGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.groupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - OAuth2Application: []
+      summary: create new group
+      tags:
+      - group
+  /v1/groups/add:
+    put:
+      consumes:
+      - application/json
+      description: add new group member
+      operationId: addNewGroupMember
+      parameters:
+      - description: set up new group
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.addNewGroupMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.groupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - OAuth2Application: []
+      summary: add new group member
+      tags:
+      - group
+  /v1/groups/remove:
+    put:
+      consumes:
+      - application/json
+      description: remove group member
+      operationId: removeGroupMember
+      parameters:
+      - description: set up removeGroupMember
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/v1.removeGroupMember'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.groupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - OAuth2Application: []
+      summary: remove group member
+      tags:
+      - group
+  /v1/messages:
+    get:
+      consumes:
+      - application/json
+      description: Get user messages
+      operationId: getMessages
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.privateChatUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - OAuth2Application: []
+      summary: Get user messages
+      tags:
+      - messages
+  /v1/messages/friend:
+    get:
+      consumes:
+      - application/json
+      description: Get user messages by friend
+      operationId: getMessagesByFriend
+      parameters:
+      - description: friendName search by friendUsername
+        in: query
+        name: friendUsername
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.getMessagesByFriendRespone'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - OAuth2Application: []
+      summary: Get user messages by friend
+      tags:
+      - messages
 swagger: "2.0"

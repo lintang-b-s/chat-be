@@ -185,7 +185,14 @@ func (u *User) Receive() error {
 
 		switch msgWs.Type {
 		case entity.MessageTypePrivateChatBot:
-			resText := u.Chat.edenAiApi.GenerateText(msgWs.PrivateChat.Message)
+			resText, err := u.Chat.edenAiApi.GenerateText(msgWs.PrivateChat.Message)
+			if err != nil {
+				msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
+				msgWs.PrivateChat.CreatedAt = time.Now()
+				msgWs.PrivateChat.Message = err.Error()
+				err = u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
 			msgWs.PrivateChat.MessageId, _ = u.Chat.idGen.GenerateId()
 			msgWs.PrivateChat.CreatedAt = time.Now()
 			msgWs.PrivateChat.Message = resText

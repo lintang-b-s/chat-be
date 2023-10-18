@@ -37,7 +37,7 @@ func (r *SessionRepo) CreateSession(ctx context.Context, c entity.CreateSessionR
 	}
 	if result := r.db.Create(&createSession); result.Error != nil {
 		//	 internal server error
-		return entity.Session{}, fmt.Errorf("SessionRepo - r.db.Create")
+		return entity.Session{}, fmt.Errorf("SessionRepo - r.db.Create: %w", result.Error)
 	}
 	session := entity.Session{
 		ID:           createSession.ID,
@@ -55,7 +55,7 @@ func (r *SessionRepo) GetSession(ctx context.Context, refreshTokkenId uuid.UUID)
 	result := r.db.Where(&Session{ID: refreshTokkenId}).First(&sessionDb)
 
 	if err := result.Error; err != nil {
-		return entity.Session{}, err
+		return entity.Session{}, fmt.Errorf("SessionRepo - GetSession- r.db.Where(&Session{ID: refreshTokkenId}).First(&sessionDb): %w", err)
 	}
 
 	session := entity.Session{
@@ -73,7 +73,7 @@ func (r *SessionRepo) DeleteSession(ctx context.Context, uuid uuid.UUID) error {
 	var sessionDb Session
 	result := r.db.Where(&Session{ID: uuid}).Delete(&sessionDb)
 	if err := result.Error; err != nil {
-		return err
+		return fmt.Errorf("Sessionrepo - r.db.Where(&Session{ID: uuid}).Delete(&sessionDb) - %w", err)
 	}
 	return nil
 }

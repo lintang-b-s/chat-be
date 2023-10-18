@@ -105,7 +105,7 @@ branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https:/
 
 12. import postman collection di docs/pelatihan umum(chat app)postman_collection.json & jalankan request di postman
 
-13. buka collection https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=36af21185828caddcd56f381bbb3e898
+13. buka collection https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
  & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
 ```
     jalankan request websocket di link postman tsb

@@ -27,10 +27,28 @@ type InsertPrivateChatRequest struct {
 	Content     string    `json:"content"`
 }
 
+// query ke db
 type GetPrivateChatQueryByUserRequest struct {
 	UserId uuid.UUID `json:"user_id"`
 }
 
+// param di usecase
 type GetPrivateChatByUserRequest struct {
 	Username string `json:"username"`
+}
+
+// query ke db
+type GetPCQueryBySdrAndRcvrRequest struct {
+	SenderId   uuid.UUID `json:"sender_id"`
+	ReceiverId uuid.UUID `json:"receiver_id"`
+}
+
+// param di usecase
+type GetPCBySdrAndRcvrRequest struct {
+	SenderUsername   string `json:"sender_username"`
+	ReceiverUsername string `json:"receiver_username"`
+}
+
+type PrivateChats struct {
+	Messages []PrivateChatMessage `json:"message"`
 }

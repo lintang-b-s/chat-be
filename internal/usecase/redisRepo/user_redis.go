@@ -24,7 +24,7 @@ func NewUserRedisrepo(rds *redispkg.Redis) *UserRedisRepo {
 // UserSetOnline set user online status di redis
 func (r *UserRedisRepo) UserSetOnline(uuid string) error {
 	key := r.getKeyUserStatus(uuid)
-	return r.rds.Client.Set(context.Background(), key, time.Now().String(), 30*time.Second).Err()
+	return fmt.Errorf("r.rds.CLient.Set : %w", r.rds.Client.Set(context.Background(), key, time.Now().String(), 30*time.Second).Err())
 }
 
 func (r *UserRedisRepo) getKeyUserStatus(userUUID string) string {
@@ -50,7 +50,7 @@ func (r *UserRedisRepo) constructKey(key string, userId string) string {
 // SetUserServerLocation Set user chat-server location in redis
 func (r *UserRedisRepo) SetUserServerLocation(userId string) error {
 	key := r.constructKey(keyUserServerLocation, userId)
-	return r.rds.Client.HSet(context.Background(), key, userId, entity.ChatServerNameGlobal.ChatServerName).Err()
+	return fmt.Errorf("r.rds.Client.HSET: %w", r.rds.Client.HSet(context.Background(), key, userId, entity.ChatServerNameGlobal.ChatServerName).Err())
 }
 
 // GetUserServerLocation  get user chat-server location in redis
@@ -58,7 +58,7 @@ func (r *UserRedisRepo) GetUserServerLocation(userId string) (string, error) {
 	key := r.constructKey(keyUserServerLocation, userId)
 	res := r.rds.Client.HGet(context.Background(), key, userId)
 	if err := res.Err(); err != nil {
-		return "", err
+		return "", fmt.Errorf("UserRedisRepo - GetUserServerLcoation -  r.rds.Client.HGet: %w", err)
 	}
 	return res.Val(), nil
 }

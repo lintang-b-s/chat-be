@@ -24,7 +24,7 @@ func InitApp() string {
 // @contact.name API Support
 // @contact.email lintangbirdasaputra23@mail.com
 // @license.name Apache 2.0
-// @securityDefinitions.apikey ApiKeyAuth
+// @securitydefinitions.oauth2.application OAuth2Application
 // @in header
 // @name Authorization
 func main() {
