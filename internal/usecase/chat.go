@@ -44,6 +44,7 @@ type ChatHub struct {
 	usrRedis  UserRedisRepo
 	pChat     PrivateChatRepo
 	idGen     sonyflake2.IdGenerator
+	gpRepo    GroupRepo
 
 	us        []*User
 	broadcast chan *entity.MessageWs
@@ -62,6 +63,7 @@ func NewChat(pubSub PubSubRedis,
 	ud UserRedisRepo,
 	pc PrivateChatRepo,
 	idGen sonyflake2.IdGenerator,
+	gpRepo GroupRepo,
 ) *ChatHub {
 
 	return &ChatHub{PubSub: pubSub,
@@ -75,6 +77,7 @@ func NewChat(pubSub PubSubRedis,
 		register:   make(chan *User),
 		pChat:      pc,
 		idGen:      idGen,
+		gpRepo:     gpRepo,
 	}
 }
 
@@ -116,6 +119,7 @@ func (c *ChatHub) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 		// mengirim ke user dg username sama dg recipient username di messageWs
 		recipientUsername := message.PrivateChat.RecipientUsername
 		rcpFanoutUsername := message.MsgOnlineStatusFanout.UserToGetNotified
+		rcpGroupChat := message.MsgGroupChat.RecipientUsername
 
 		switch message.Type {
 		case entity.MessageTypePrivateChat:
@@ -126,6 +130,13 @@ func (c *ChatHub) sendToSpecificUserInboxInServer(message *entity.MessageWs) {
 			}
 		case entity.MessageTypeOnlineStatusFanOut:
 			if user.Name == rcpFanoutUsername {
+				select {
+				case user.inbox <- message:
+				}
+			}
+
+		case entity.MessageTypeGroupChat:
+			if user.Name == rcpGroupChat {
 				select {
 				case user.inbox <- message:
 				}
@@ -149,6 +160,7 @@ func (u *User) Receive() error {
 
 	defer func() {
 		u.Chat.unregister <- u
+		u.Chat.userOnlineStatusFanout(u.Name, false)
 		u.Conn.Close()
 	}()
 	// Set Max Size of Messages in Bytes
@@ -179,7 +191,6 @@ func (u *User) Receive() error {
 		msgWs := &entity.MessageWs{}
 		if err = json.Unmarshal(msg, msgWs); err != nil {
 			log.Println("json.Unmarshal: ", err)
-
 			break
 		}
 
@@ -248,10 +259,50 @@ func (u *User) Receive() error {
 			// jika teman user berada di server yg berbeda dg server user sender
 			// publish ke chat-server teman
 			u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
+		case entity.MessageTypeGroupChat:
+			msgWs.MsgGroupChat.MessageId, _ = u.Chat.idGen.GenerateId()
+			sender, err := u.Chat.userPg.GetUserByUsername(msgWs.MsgGroupChat.SenderUsername)
+			if err != nil {
+				msgWs.MsgGroupChat.Content = err.Error()
+				msgWs.PrivateChat.CreatedAt = time.Now()
+				err = u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
+			groupDb, err := u.Chat.gpRepo.GetGroupByName(msgWs.MsgGroupChat.GroupName)
+			if err != nil {
+				msgWs.MsgGroupChat.Content = err.Error()
+				msgWs.PrivateChat.CreatedAt = time.Now()
+				err = u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
+			group, err := u.Chat.gpRepo.GetGroupMembers(groupDb.Id, sender.Id)
+			if err != nil {
+				msgWs.MsgGroupChat.Content = err.Error()
+				msgWs.PrivateChat.CreatedAt = time.Now()
+				err = u.Write(websocket.TextMessage, msgWs)
+				continue
+			}
 
+			groupMembers := group.Members
+			for _, memberId := range groupMembers {
+				friend, _ := u.Chat.userPg.GetUserById(memberId)
+				isFriendInSameServer, friendServerLocation := u.Chat.isFriendInSameServer(memberId.String())
+				msgWs.MsgGroupChat.RecipientUsername = friend.Username
+				if friend.Username == msgWs.MsgGroupChat.SenderUsername {
+					continue
+				}
+				if isFriendInSameServer == true {
+					// Jika friend/recipient message berada di chat-server yg sama dg chat-server user
+					u.Chat.broadcast <- msgWs
+					continue
+				}
+
+				// jika teman user berada di server yg berbeda dg server user sender
+				// publish ke chat-server teman
+				u.Chat.PubSub.PublishToChannel(friendServerLocation, msgWs)
+			}
 		}
 	}
-
 	return nil
 }
 
@@ -259,7 +310,6 @@ func (u *User) Receive() error {
 // -> mereset durasi readDeadline (tambah 30 detik lagi) & set user online di dalam redis
 // dan juga mengirim status online user ke semua kontaknya
 func (u *User) pongHandler(pongMsg string) error {
-	log.Println("pong received from client " + u.Name + " !!")
 
 	user, err := u.Chat.userPg.GetUserByUsername(u.Name)
 	if err != nil {
@@ -416,6 +466,7 @@ func (u *User) writePump() {
 
 	defer func() {
 		ticker.Stop()
+		u.Chat.userOnlineStatusFanout(u.Name, false)
 		u.Conn.Close()
 	}()
 	for {
@@ -423,7 +474,6 @@ func (u *User) writePump() {
 		select {
 
 		case <-ticker.C:
-			log.Println("send ping messages to client " + u.Name + " !!")
 
 			err := u.Conn.WriteMessage(websocket.PingMessage, []byte{})
 			if err != nil {

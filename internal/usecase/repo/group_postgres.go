@@ -134,7 +134,6 @@ func (r *GroupRepo) AddNewGroupMember(ctx context.Context, e entity.AddNewGroupM
 	}
 
 	for _, memberId := range e.Members {
-
 		group.Members = append(group.Members, UsersGroup{Id: uuid.New(), UserId: memberId})
 	}
 
@@ -199,4 +198,53 @@ func (r *GroupRepo) RemoveMember(ctx context.Context, e entity.RemoveGroupMember
 		UpdatedAt: group.UpdatedAt,
 	}
 	return res, nil
+}
+
+func (r *GroupRepo) GetGroupMembers(groupId uuid.UUID, userId uuid.UUID) (entity.Group, error) {
+	var group Group
+	if res := r.db.Where(&Group{Id: groupId}).Joins("LEFT JOIN users_group on users_group.group_id=groups.id").Preload("Members").First(&group); res.Error != nil {
+		return entity.Group{}, fmt.Errorf("GroupRepo - AddNewGroupMember -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", res.Error)
+	}
+
+	uMap := make(map[string]bool)
+
+	isMember := false
+	// cek apakah user yg login termasuk member dari groupnya
+	for _, member := range group.Members {
+		if member.UserId == userId {
+			isMember = true
+		}
+		uMap[member.UserId.String()] = true
+	}
+
+	if isMember == false {
+		return entity.Group{}, fmt.Errorf("GroupRepo - GetGroupMembers -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", UserNotMemberErr)
+	}
+
+	var members []uuid.UUID
+	for _, member := range group.Members {
+		members = append(members, member.UserId)
+	}
+
+	groupRes := entity.Group{
+		Id:      group.Id,
+		Name:    group.Name,
+		Members: members,
+	}
+
+	return groupRes, nil
+
+}
+
+func (r *GroupRepo) GetGroupByName(groupName string) (entity.Group, error) {
+	var group Group
+	if res := r.db.Where(&Group{Name: groupName}).Joins("LEFT JOIN users_group on users_group.group_id=groups.id").Preload("Members").First(&group); res.Error != nil {
+		return entity.Group{}, fmt.Errorf("GroupRepo - GetGroupByName -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", res.Error)
+	}
+
+	groupRes := entity.Group{
+		Id:   group.Id,
+		Name: group.Name,
+	}
+	return groupRes, nil
 }

@@ -19,11 +19,11 @@
 ## Message table for 1 on 1 chat
 ![message table for 1 on 1 chat](https://res.cloudinary.com/di0pjroxh/image/upload/v1697274479/one-on-one-messageTable_ptublq.png)
 
-
+## API docs
+ada di docs/swagger.yaml
+postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
 
 ## Quick Start
-branch ini hanya bisa dijalankan di os linux/mac (karena memakai library https://github.com/cloudwego/netpoll)
-.switch ke branch windows utk bisa jalankan di os manapun
 
 
 1. install golang: 

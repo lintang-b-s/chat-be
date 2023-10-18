@@ -14,10 +14,11 @@ type CreateGroupRequest struct {
 
 // Group
 type Group struct {
-	Id        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Id        uuid.UUID   `json:"id"`
+	Name      string      `json:"name"`
+	Members   []uuid.UUID `json:"members"`
+	CreatedAt time.Time   `json:"createdAt"`
+	UpdatedAt time.Time   `json:"updatedAt"`
 }
 
 // AddNewGroupMemberReq menamahkan member group chat baru

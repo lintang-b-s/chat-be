@@ -1,6 +1,8 @@
 package entity
 
-import "time"
+import (
+	"time"
+)
 
 type DataPubSubMessage struct {
 	UUID          string    `json:"UUID"`
@@ -15,7 +17,8 @@ type MessageWs struct {
 	Type                   MessageType                `json:"type"`
 	PrivateChat            MessagePrivateChat         `json:"private_chat,omitempty"`
 	MsgOnlineStatusFanout  MessageOnlineStatusFanout  `json:"msg_online_status_fanout,omitempty"`
-	MsgFriendsOnlineStatus MessageFriendsOnlineStatus `json:"msg_friends_online_status"`
+	MsgFriendsOnlineStatus MessageFriendsOnlineStatus `json:"msg_friends_online_status,omitempty"`
+	MsgGroupChat           MessageGroupChat           `json:"group_chat,omitempty"`
 }
 
 // MessagePrivateChat message untuk private chat
@@ -42,6 +45,16 @@ type MessageFriendsOnlineStatus struct {
 	TotalOnline  int      `json:"total_online"`
 	TotalFriends int      `json:"total_friends"`
 	Friends      []Friend `json:"friends"`
+}
+
+// MessageGroupChat Message untuk group chat
+type MessageGroupChat struct {
+	GroupName         string    `json:"group_name"`
+	MessageId         uint64    `json:"message_id,omitempty"`
+	SenderUsername    string    `json:"sender_username"`
+	RecipientUsername string    `json:"recipient_username,omitempty"` // diisi ketika broadcast ke channel broadcast/ channell redis
+	Content           string    `json:"message"`
+	CreatedAt         time.Time `json:"created_at,omitempty"`
 }
 
 // Friend Struktur data user

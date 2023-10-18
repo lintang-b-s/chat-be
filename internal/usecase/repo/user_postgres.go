@@ -206,3 +206,20 @@ func (r *UserRepo) GetUserByUsername(username string) (entity.GetUser, error) {
 
 	return user, nil
 }
+
+func (r *UserRepo) GetUserById(userId uuid.UUID) (entity.GetUser, error) {
+	var userDb User
+	result := r.db.Where(&User{ID: userId}).First(&userDb)
+	if err := result.Error; err != nil {
+		return entity.GetUser{}, fmt.Errorf("UserRepo - GetUserById -  r.db.Where(&User{Username: username}).First(&userDb): %w", result.Error)
+	}
+
+	user := entity.GetUser{
+		Id:             userDb.ID,
+		Username:       userDb.Username,
+		Email:          userDb.Email,
+		HashedPassword: userDb.HashedPassword,
+	}
+
+	return user, nil
+}

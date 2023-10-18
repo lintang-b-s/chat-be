@@ -65,6 +65,7 @@ func Run(cfg *config.Config) {
 		redisRepo.NewUserRedisrepo(redis),
 		repo.NewPrivateChatRepo(gorm.Pool),
 		sonyflake.NewSonyFlake(),
+		repo.NewGroupRepo(gorm.Pool),
 	)
 
 	go chat.Run()

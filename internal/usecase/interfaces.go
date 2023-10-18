@@ -48,6 +48,7 @@ type (
 		GetUserFriend(context.Context, string, string) error
 		//GetAllUsers(context.Context) ([]entity.UserResponse, error)
 		GetUserByUsername(string) (entity.GetUser, error)
+		GetUserById(uuid.UUID) (entity.GetUser, error)
 	}
 
 	// SessionRepo
@@ -116,6 +117,8 @@ type (
 		CreateGroup(context.Context, entity.CreateGroupRequest) (entity.Group, error)
 		AddNewGroupMember(context.Context, entity.AddNewGroupMemberReq) (entity.Group, error)
 		RemoveMember(context.Context, entity.RemoveGroupMemberReq) (entity.Group, error)
+		GetGroupMembers(uuid.UUID, uuid.UUID) (entity.Group, error)
+		GetGroupByName(string) (entity.Group, error)
 	}
 
 	Group interface {
