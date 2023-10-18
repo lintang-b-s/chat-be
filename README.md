@@ -19,8 +19,15 @@
 ## Message table for 1 on 1 chat
 ![message table for 1 on 1 chat](https://res.cloudinary.com/di0pjroxh/image/upload/v1697274479/one-on-one-messageTable_ptublq.png)
 
+
+## Group Chat Flow
+![group-chat flow](https://bytebytego.com/_next/image?url=%2Fimages%2Fcourses%2Fsystem-design-interview%2Fdesign-a-chat-system%2Ffigure-12-14-DRZR5QM7.png&w=1080&q=75)
+
+## Message table for group chat
+![group-chat message table](https://bytebytego.com/_next/image?url=%2Fimages%2Fcourses%2Fsystem-design-interview%2Fdesign-a-chat-system%2Ffigure-12-10-2TIQVS3D.png&w=750&q=75)
+
 ## API docs
-ada di docs/swagger.yaml
+ada di docs/swagger.yaml <br/> <br/>
 postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
 
 ## Quick Start
@@ -103,7 +110,7 @@ postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa87
     make run
 ```
 
-12. import postman collection di docs/pelatihan umum(chat app)postman_collection.json & jalankan request di postman
+12. jalankan request postman collection yg lengkap & ada websocket di https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8 atau  import postman collection di docs/pelatihan umum(chat app)postman_collection.json (tapi tidak lengkap & tidak ada websocket) & jalankan request di postman 
 
 13. buka collection https://app.getpostman.com/join-team?invite_code=3aa872d85da6ae474265256597513a0a&target_code=64d73c34516d85e5cb485c9c40a91be8
  & ganti query parameter otp dan username dg otp dan username yang diberikan saat login 
