@@ -48,12 +48,34 @@ definitions:
           $ref: '#/definitions/v1.userResponse'
         type: array
     type: object
-  v1.getMessagesByFriendRespone:
+  v1.getMessagesByFriendResponse:
     properties:
       message:
         items:
           $ref: '#/definitions/v1.privateChatMessage'
         type: array
+    type: object
+  v1.getMessagesByGroupName:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/v1.groupChatMessage'
+        type: array
+    type: object
+  v1.groupChatMessage:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      message_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: string
     type: object
   v1.groupResponse:
     properties:
@@ -461,7 +483,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.getMessagesByFriendRespone'
+            $ref: '#/definitions/v1.getMessagesByFriendResponse'
         "400":
           description: Bad Request
           schema:
@@ -473,6 +495,37 @@ paths:
       security:
       - OAuth2Application: []
       summary: Get user messages by friend
+      tags:
+      - messages
+  /v1/messages/group:
+    get:
+      consumes:
+      - application/json
+      description: Get user messages by group Chat
+      operationId: getMessagesByGroupChat
+      parameters:
+      - description: groupName search by group
+        in: query
+        name: groupName
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.getMessagesByGroupName'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/v1.response'
+      security:
+      - OAuth2Application: []
+      summary: Get user messages by group Chat
       tags:
       - messages
 swagger: "2.0"

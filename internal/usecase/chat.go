@@ -45,6 +45,7 @@ type ChatHub struct {
 	pChat     PrivateChatRepo
 	idGen     sonyflake2.IdGenerator
 	gpRepo    GroupRepo
+	gcRepo    GroupChatRepo
 
 	us        []*User
 	broadcast chan *entity.MessageWs
@@ -64,6 +65,7 @@ func NewChat(pubSub PubSubRedis,
 	pc PrivateChatRepo,
 	idGen sonyflake2.IdGenerator,
 	gpRepo GroupRepo,
+	gcRepo GroupChatRepo,
 ) *ChatHub {
 
 	return &ChatHub{PubSub: pubSub,
@@ -78,6 +80,7 @@ func NewChat(pubSub PubSubRedis,
 		pChat:      pc,
 		idGen:      idGen,
 		gpRepo:     gpRepo,
+		gcRepo:     gcRepo,
 	}
 }
 
@@ -268,7 +271,7 @@ func (u *User) Receive() error {
 				err = u.Write(websocket.TextMessage, msgWs)
 				continue
 			}
-			groupDb, err := u.Chat.gpRepo.GetGroupByName(msgWs.MsgGroupChat.GroupName)
+			groupDb, err := u.Chat.gpRepo.GetGroupByName(msgWs.MsgGroupChat.GroupName, sender.Id)
 			if err != nil {
 				msgWs.MsgGroupChat.Content = err.Error()
 				msgWs.PrivateChat.CreatedAt = time.Now()
@@ -282,6 +285,14 @@ func (u *User) Receive() error {
 				err = u.Write(websocket.TextMessage, msgWs)
 				continue
 			}
+
+			gcMessageDb := entity.GroupChatMessage{
+				GroupId:   groupDb.Id,
+				MessageId: msgWs.MsgGroupChat.MessageId,
+				UserId:    sender.Id,
+				Content:   msgWs.MsgGroupChat.Content,
+			}
+			u.Chat.gcRepo.InsertNewChat(gcMessageDb)
 
 			groupMembers := group.Members
 			for _, memberId := range groupMembers {

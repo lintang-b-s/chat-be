@@ -9,12 +9,16 @@ import (
 type MessageuseCase struct {
 	pcRepo     PrivateChatRepo
 	userPgRepo UserRepo
+	gcRepo     GroupChatRepo
+	gpRepo     GroupRepo
 }
 
-func NewMessageuseCase(pcRepo PrivateChatRepo, upg UserRepo) *MessageuseCase {
+func NewMessageuseCase(pcRepo PrivateChatRepo, upg UserRepo, gcRepo GroupChatRepo, gpRepo GroupRepo) *MessageuseCase {
 	return &MessageuseCase{
 		pcRepo:     pcRepo,
 		userPgRepo: upg,
+		gcRepo:     gcRepo,
+		gpRepo:     gpRepo,
 	}
 }
 
@@ -56,4 +60,19 @@ func (uc *MessageuseCase) GetMessagesByRecipient(ctx context.Context, e entity.G
 	}
 
 	return pcs, nil
+}
+
+func (uc *MessageuseCase) GetMessagesByGroupChat(ctx context.Context, e entity.GroupChatMsgRequest) (entity.GroupChatMessages, error) {
+	user, err := uc.userPgRepo.GetUserByUsername(e.UserName)
+	if err != nil {
+		return entity.GroupChatMessages{}, fmt.Errorf("MessageuseCase - GetMessagesByGroupChat - uc.userPgRepo.GetUserByUsername: %w", err)
+	}
+	group, err := uc.gpRepo.GetGroupByName(e.GroupName, user.Id)
+	if err != nil {
+		return entity.GroupChatMessages{}, fmt.Errorf("MessageuseCase - GetMessagesByGroupChat - uc.gpRepo.GetGroupByName: %w", err)
+	}
+
+	gcMessages, err := uc.gcRepo.GetMessagesByGroupId(group.Id)
+
+	return gcMessages, nil
 }

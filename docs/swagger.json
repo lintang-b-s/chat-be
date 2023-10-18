@@ -471,7 +471,56 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.getMessagesByFriendRespone"
+                            "$ref": "#/definitions/v1.getMessagesByFriendResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/v1.response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/messages/group": {
+            "get": {
+                "security": [
+                    {
+                        "OAuth2Application": []
+                    }
+                ],
+                "description": "Get user messages by group Chat",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Get user messages by group Chat",
+                "operationId": "getMessagesByGroupChat",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "groupName search by group",
+                        "name": "groupName",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.getMessagesByGroupName"
                         }
                     },
                     "400": {
@@ -564,7 +613,7 @@
                 }
             }
         },
-        "v1.getMessagesByFriendRespone": {
+        "v1.getMessagesByFriendResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -572,6 +621,40 @@
                     "items": {
                         "$ref": "#/definitions/v1.privateChatMessage"
                     }
+                }
+            }
+        },
+        "v1.getMessagesByGroupName": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.groupChatMessage"
+                    }
+                }
+            }
+        },
+        "v1.groupChatMessage": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },

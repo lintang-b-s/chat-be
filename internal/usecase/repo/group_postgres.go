@@ -168,25 +168,6 @@ func (r *GroupRepo) RemoveMember(ctx context.Context, e entity.RemoveGroupMember
 		return entity.Group{}, fmt.Errorf("GroupRepo - AddNewGroupMember -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", UserNotMemberErr)
 	}
 
-	//var indexUserToRemove int
-	//for i, member := range group.Members {
-	//	if member.UserId == e.Member {
-	//		indexUserToRemove = i
-	//	}
-	//}
-	//
-	//without := make([]UsersGroup, len(group.Members)-1)
-	//copy(without[:indexUserToRemove], group.Members[:indexUserToRemove])
-	//copy(without[indexUserToRemove:], group.Members[indexUserToRemove+1:])
-	//group.Members = without
-
-	//del := UsersGroup{
-	//	UserId:  e.Member,
-	//	GroupId: group.Id,
-	//}
-	//if res := r.db.Where(&UsersGroup{UserId: e.Member, GroupId: group.Id}).Delete(&del); res.Error != nil {
-	//	return entity.Group{}, fmt.Errorf("GroupRepo - RemoveMember - r.db.Save(&group): %w", res.Error)
-	//}
 	if result := r.db.Exec("DELETE FROM users_group WHERE user_id=" + "'" + e.Member.String() + "'" + " AND group_id='" + group.Id.String() + "';"); result.RowsAffected == 0 {
 		return entity.Group{}, fmt.Errorf("GroupRepo - RemoveMember - r.db.Save(&group): rows already deleted")
 	}
@@ -206,10 +187,9 @@ func (r *GroupRepo) GetGroupMembers(groupId uuid.UUID, userId uuid.UUID) (entity
 		return entity.Group{}, fmt.Errorf("GroupRepo - AddNewGroupMember -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", res.Error)
 	}
 
-	uMap := make(map[string]bool)
-
-	isMember := false
 	// cek apakah user yg login termasuk member dari groupnya
+	uMap := make(map[string]bool)
+	isMember := false
 	for _, member := range group.Members {
 		if member.UserId == userId {
 			isMember = true
@@ -236,10 +216,24 @@ func (r *GroupRepo) GetGroupMembers(groupId uuid.UUID, userId uuid.UUID) (entity
 
 }
 
-func (r *GroupRepo) GetGroupByName(groupName string) (entity.Group, error) {
+func (r *GroupRepo) GetGroupByName(groupName string, userId uuid.UUID) (entity.Group, error) {
 	var group Group
 	if res := r.db.Where(&Group{Name: groupName}).Joins("LEFT JOIN users_group on users_group.group_id=groups.id").Preload("Members").First(&group); res.Error != nil {
 		return entity.Group{}, fmt.Errorf("GroupRepo - GetGroupByName -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", res.Error)
+	}
+
+	// cek apakah user yg login termasuk member dari groupnya
+	uMap := make(map[string]bool)
+	isMember := false
+	for _, member := range group.Members {
+		if member.UserId == userId {
+			isMember = true
+		}
+		uMap[member.UserId.String()] = true
+	}
+
+	if isMember == false {
+		return entity.Group{}, fmt.Errorf("GroupRepo - GetGroupByName -  r.db.Where(&Group{Name: e.Name}).First(&group): %w", UserNotMemberErr)
 	}
 
 	groupRes := entity.Group{

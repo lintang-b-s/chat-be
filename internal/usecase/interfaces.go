@@ -106,10 +106,11 @@ type (
 		GetPrivateChatBySenderAndReceiver(entity.GetPCQueryBySdrAndRcvrRequest) (entity.PrivateChats, error)
 	}
 
-	//
+	//Message  UseCase untuk bussines logic Message
 	Message interface {
 		GetMessageByUserLogin(context.Context, entity.GetPrivateChatByUserRequest) (entity.PrivateChatUsers, error)
 		GetMessagesByRecipient(context.Context, entity.GetPCBySdrAndRcvrRequest) (entity.PrivateChats, error)
+		GetMessagesByGroupChat(context.Context, entity.GroupChatMsgRequest) (entity.GroupChatMessages, error)
 	}
 
 	// Repository for group
@@ -118,12 +119,19 @@ type (
 		AddNewGroupMember(context.Context, entity.AddNewGroupMemberReq) (entity.Group, error)
 		RemoveMember(context.Context, entity.RemoveGroupMemberReq) (entity.Group, error)
 		GetGroupMembers(uuid.UUID, uuid.UUID) (entity.Group, error)
-		GetGroupByName(string) (entity.Group, error)
+		GetGroupByName(string, uuid.UUID) (entity.Group, error)
 	}
 
+	// UseCase Group
 	Group interface {
 		CreateGroup(context.Context, entity.CreateGroupReqUc) (entity.Group, error)
 		AddNewGroupMember(context.Context, entity.AddNewGroupMemberReqUc) (entity.Group, error)
 		RemoveGroupMember(context.Context, entity.RemoveGroupMemberReqUc) (entity.Group, error)
+	}
+
+	// Repository GroupChat
+	GroupChatRepo interface {
+		GetMessagesByGroupId(uuid.UUID) (entity.GroupChatMessages, error)
+		InsertNewChat(entity.GroupChatMessage) (entity.GroupChatMessage, error)
 	}
 )

@@ -19,6 +19,9 @@
 ## Message table for 1 on 1 chat
 ![message table for 1 on 1 chat](https://res.cloudinary.com/di0pjroxh/image/upload/v1697274479/one-on-one-messageTable_ptublq.png)
 
+Messages_id digenerate menggunakan https://github.com/sony/sonyflake, yg mana besarnya integer id yg digenerate tergantung waktu saat id digeneraete
+<br/>
+untuk mendapatkan messages yang diurutkan berdasarkan time (dari paling lama -> terbaru) bisa pakai query "order by id asc".
 
 ## Group Chat Flow
 ![group-chat flow](https://bytebytego.com/_next/image?url=%2Fimages%2Fcourses%2Fsystem-design-interview%2Fdesign-a-chat-system%2Ffigure-12-14-DRZR5QM7.png&w=1080&q=75)
@@ -33,7 +36,7 @@ postman collection ada di https://app.getpostman.com/join-team?invite_code=3aa87
 ## Quick Start
 
 
-1. install golang: 
+1. install golang & set GOPATH Variabel di OS kalian: 
 ```
  Windows: https://www.youtube.com/watch?v=xYpqI7GRrvE
  Mac: https://www.youtube.com/watch?v=HrFqH6Dj6kk

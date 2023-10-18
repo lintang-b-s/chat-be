@@ -66,6 +66,7 @@ func Run(cfg *config.Config) {
 		repo.NewPrivateChatRepo(gorm.Pool),
 		sonyflake.NewSonyFlake(),
 		repo.NewGroupRepo(gorm.Pool),
+		repo.NewGroupChatRepo(gorm.Pool),
 	)
 
 	go chat.Run()
@@ -89,6 +90,8 @@ func Run(cfg *config.Config) {
 	messageUseCase := usecase.NewMessageuseCase(
 		repo.NewPrivateChatRepo(gorm.Pool),
 		repo.NewUserRepo(gorm.Pool),
+		repo.NewGroupChatRepo(gorm.Pool),
+		repo.NewGroupRepo(gorm.Pool),
 	)
 
 	//groupUseCase
