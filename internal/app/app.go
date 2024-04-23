@@ -4,6 +4,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	uuid2 "github.com/google/uuid"
@@ -13,9 +17,6 @@ import (
 	"github.com/lintangbs/chat-be/internal/util/jwt"
 	"github.com/lintangbs/chat-be/internal/util/sonyflake"
 	"github.com/lintangbs/chat-be/pkg/redispkg"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/lintangbs/chat-be/config"
 	v1 "github.com/lintangbs/chat-be/internal/controller/http/v1"
@@ -36,8 +37,10 @@ func Run(cfg *config.Config) {
 	}
 
 	// gorm repo
-	gorm, err := gorm.NewGorm(cfg.Postgres.Username, cfg.Postgres.Password)
-
+	gorm, err := gorm.NewGorm(cfg.Postgres.Host, cfg.Postgres.Username, cfg.Postgres.Password)
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - jwtTokenMaker - jwt.NewJWTMaker: %w", err))
+	}
 	// jwt
 	jwtTokenMaker, err := jwt.NewJWTMaker("VBKNhRGFYZWGtbQ8hQ6ABQn1oNbYkHTu/fj/cUUO9p8=")
 
@@ -137,7 +140,6 @@ func Run(cfg *config.Config) {
 		l.Info("app - Run - signal: " + s.String())
 	case err = <-httpServer.Notify():
 		l.Error(fmt.Errorf("app - Run - httpServer.Notify: %w", err))
-
 	}
 
 	// Shutdown

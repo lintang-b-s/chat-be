@@ -34,13 +34,14 @@ type (
 	}
 
 	Redis struct {
-		Address  string `env-required:"true" yaml:"server_address" `
+		Address  string `env-required:"true" yaml:"server_address" env:"REDIS_ADDRESS" `
 		Password string `env-required:"true" yaml:"password" env:"REDIS_PASSWORD"`
 	}
 
 	Postgres struct {
-		Username string `env-required:"true" yaml:"username"`
-		Password string `env-required:"true" yaml:"password"`
+		Host string `env-required:"true"  env:"POSTGRES_HOST"`
+		Username string `env-required:"true" yaml:"username" env:"POSTGRES_USERNAME"`
+		Password string `env-required:"true" yaml:"password" env:"POSTGRES_PASSWORD"`
 	}
 
 	EdenAi struct {
@@ -52,9 +53,8 @@ type (
 func NewConfig() (*Config, error) {
 	cfg := &Config{}
 
-	err := cleanenv.ReadConfig("./config/config.yml", cfg)
 
-	err = cleanenv.ReadConfig("./.env", cfg)
+	err := cleanenv.ReadConfig("./.env", cfg)
 	if err != nil {
 		return nil, err
 	}
